@@ -82,35 +82,35 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |---|---|---|
-| VMLC-01 | TBD | Pending |
-| VMLC-02 | TBD | Pending |
-| VMLC-03 | TBD | Pending |
-| VMLC-04 | TBD | Pending |
-| VMLC-05 | TBD | Pending |
-| VMLC-06 | TBD | Pending |
-| CONF-01 | TBD | Pending |
-| CONF-02 | TBD | Pending |
-| CONF-03 | TBD | Pending |
-| CONF-04 | TBD | Pending |
-| CONF-05 | TBD | Pending |
-| OBSV-01 | TBD | Pending |
-| OBSV-02 | TBD | Pending |
-| OBSV-03 | TBD | Pending |
-| HOST-01 | TBD | Pending |
-| HOST-02 | TBD | Pending |
-| HOST-03 | TBD | Pending |
-| HOST-04 | TBD | Pending |
-| HOST-05 | TBD | Pending |
-| HOST-06 | TBD | Pending |
-| DOCS-01 | TBD | Pending |
-| DOCS-02 | TBD | Pending |
-| DOCS-03 | TBD | Pending |
-| DOCS-04 | TBD | Pending |
+| CONF-01 | Phase 1 | Pending |
+| HOST-01 | Phase 1 | Pending |
+| HOST-02 | Phase 1 | Pending |
+| HOST-03 | Phase 1 | Pending |
+| HOST-04 | Phase 1 | Pending |
+| HOST-05 | Phase 1 | Pending |
+| HOST-06 | Phase 1 | Pending |
+| VMLC-01 | Phase 2 | Pending |
+| VMLC-02 | Phase 2 | Pending |
+| VMLC-03 | Phase 2 | Pending |
+| VMLC-04 | Phase 2 | Pending |
+| VMLC-05 | Phase 2 | Pending |
+| VMLC-06 | Phase 2 | Pending |
+| CONF-02 | Phase 3 | Pending |
+| CONF-03 | Phase 3 | Pending |
+| CONF-04 | Phase 3 | Pending |
+| CONF-05 | Phase 3 | Pending |
+| OBSV-01 | Phase 3 | Pending |
+| OBSV-02 | Phase 3 | Pending |
+| OBSV-03 | Phase 3 | Pending |
+| DOCS-01 | Phase 4 | Pending |
+| DOCS-02 | Phase 4 | Pending |
+| DOCS-03 | Phase 4 | Pending |
+| DOCS-04 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 24 total
-- Mapped to phases: 0
-- Unmapped: 24 ⚠️
+- Mapped to phases: 24
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-17*
