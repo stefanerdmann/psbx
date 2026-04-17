@@ -85,6 +85,16 @@ export function limaStart(name, yamlPath) {
 }
 
 // ---------------------------------------------------------------------------
+// Resume a stopped VM.
+// Unlike limaStart, this does NOT take a YAML path — it restarts an existing
+// VM that was previously stopped. Used by `enter` (auto-start) and `start`.
+// ---------------------------------------------------------------------------
+
+export function limaResume(name) {
+  runLimactl(['start', name]);
+}
+
+// ---------------------------------------------------------------------------
 // Stop a running VM.
 // ---------------------------------------------------------------------------
 

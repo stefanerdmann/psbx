@@ -1,8 +1,8 @@
 # Project State: pi-sandbox
 
 **Current phase:** Phase 1 — Core Infrastructure
-**Phase status:** Not started
-**Overall progress:** 0/4 phases complete
+**Phase status:** Complete
+**Overall progress:** 1/4 phases complete
 
 ## Project Reference
 
@@ -15,14 +15,15 @@ See: .planning/PROJECT.md (updated 2026-04-17)
 
 | Phase | Name | Status | Plans |
 |---|---|---|---|
-| 1 | Core Infrastructure | ◆ Active | 0/2 |
-| 2 | VM Lifecycle Commands | ○ Pending | 0/0 |
+| 1 | Core Infrastructure | ✓ Complete | 2/2 |
+| 2 | VM Lifecycle Commands | ◆ Active | 0/2 |
 | 3 | Config Management & Observability | ○ Pending | 0/0 |
 | 4 | Documentation | ○ Pending | 0/0 |
 
 ## Completed Work
 
-(None yet)
+- Phase 1, Plan 1.1: Project scaffold + config module
+- Phase 1, Plan 1.2: Lima wrapper + template builder
 
 ---
 *Last updated: 2026-04-17 after initialization*
