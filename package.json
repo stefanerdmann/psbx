@@ -1,0 +1,28 @@
+{
+  "name": "pi-sandbox",
+  "version": "0.1.0",
+  "description": "CLI tool for managing per-project Lima VMs that sandbox the pi coding agent on macOS ARM",
+  "type": "module",
+  "bin": {
+    "pi-sandbox": "./bin/pi-sandbox.js"
+  },
+  "files": [
+    "bin/",
+    "src/"
+  ],
+  "keywords": [
+    "pi",
+    "sandbox",
+    "lima",
+    "vm",
+    "coding-agent"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "commander": "^13.0.0",
+    "js-yaml": "^4.1.0"
+  }
+}

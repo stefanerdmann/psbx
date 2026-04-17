@@ -1,0 +1,105 @@
+# pi-template.yaml
+
+vmType: "vz"
+mountType: "virtiofs"
+
+user:
+  name: pi
+
+images:
+- location: "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-arm64.img"
+  arch: "aarch64"
+
+mounts:
+  - location: "~/.pi"
+    mountPoint: "/mnt/pi-host-config"
+    writable: false
+    
+  - location: "${DYNAMIC_PROJECT_DIR}"
+    mountPoint: "/app"
+    writable: true
+
+  # Mount the dynamically resolved cert directory
+  - location: "${HOST_CERT_DIR}"
+    mountPoint: "/mnt/host-cert-dir"
+    writable: false
+
+provision:
+  - mode: system
+    script: |
+      set -x
+      
+      echo "🚀 --- STARTING SYSTEM PROVISIONING --- 🚀"
+      
+      # Wait until the package manager (apt) is unlocked
+      while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 1; done
+
+      echo "Updating base certificates with Host cert..."
+      apt-get update
+      apt-get install -y ca-certificates
+      
+      # Grab the dynamically named file from the mounted directory
+      cp /mnt/host-cert-dir/${HOST_CERT_FILE} /usr/local/share/ca-certificates/host-cert.crt
+      update-ca-certificates
+      
+      echo "Updating packages..."
+      apt-get update
+      apt-get install -y curl gnupg git
+
+      # Wait until the package manager (apt) is unlocked
+      curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+      apt-get install -y nodejs
+      npm install -g @mariozechner/pi-coding-agent
+      
+      echo "✅ --- SYSTEM PROVISIONING COMPLETE --- ✅"
+
+  - mode: user
+    script: |
+      set -x
+      
+      echo "👤 --- STARTING USER PROVISIONING --- 👤"
+      
+      # Create necessary data directories to store pi session data and assign ownership
+      sudo mkdir -p /pi/data/sessions
+      sudo chown -R pi /pi/data
+
+      # Setup the agent configuration folder using a "quarantine" strategy.
+      # To protect host data integrity while allowing the agent to update specific files,
+      # we use read-only symlinks for settings and local copies for writable data (like auth).
+      mkdir -p ~/.pi/agent
+
+      # Enforce host data protection: Symlink settings as Read-Only.
+      # This prevents the VM from modifying the master config on the host.
+      if [ -f /mnt/pi-host-config/agent/settings.json ]; then
+        ln -sf /mnt/pi-host-config/agent/settings.json ~/.pi/agent/settings.json
+      fi
+      
+      # Decouple authentication: Copy auth tokens to allow the VM to manage 
+      # its own session/refresh cycle without affecting the host's auth file.
+      if [ -f /mnt/pi-host-config/agent/auth.json ]; then
+        cp /mnt/pi-host-config/agent/auth.json ~/.pi/agent/auth.json
+        chmod 600 ~/.pi/agent/auth.json
+      fi
+
+      # set global npm install folder to user space because otherwise pi will fail to
+      # install packages specifed on host because pi tries to install global
+      mkdir -p ~/.npm-global
+      npm config set prefix '~/.npm-global'
+
+      # Copy mcp.json to the guest 
+      echo "Copy mcp.json to the guest"
+      
+      if [ -f /mnt/pi-host-config/agent/mcp.json ]; then
+        echo "Copying mcp.json into the project..."
+        cp /mnt/pi-host-config/agent/mcp.json ~/.pi/agent/mcp.json
+      else
+        echo "⚠️  No mcp.json found in host ~/.pi/ to copy."
+      fi
+
+      # Set the default working directory for new terminal sessions
+      echo "cd /app" >> ~/.bashrc
+
+      # set certs for Node.js to allow downloading binaries
+      echo "export NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt" >> ~/.bashrc
+      
+      echo "✅ --- USER PROVISIONING COMPLETE --- ✅"

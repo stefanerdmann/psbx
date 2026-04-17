@@ -15,7 +15,7 @@ See: .planning/PROJECT.md (updated 2026-04-17)
 
 | Phase | Name | Status | Plans |
 |---|---|---|---|
-| 1 | Core Infrastructure | ○ Pending | 0/0 |
+| 1 | Core Infrastructure | ◆ Active | 0/2 |
 | 2 | VM Lifecycle Commands | ○ Pending | 0/0 |
 | 3 | Config Management & Observability | ○ Pending | 0/0 |
 | 4 | Documentation | ○ Pending | 0/0 |
