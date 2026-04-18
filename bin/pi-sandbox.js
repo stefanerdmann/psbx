@@ -19,35 +19,34 @@ program
   .description('Manage per-project Lima VMs for the pi coding agent')
   .version('0.1.0');
 
-program
-  .command('create')
+// Helper to add --profile option to lifecycle commands
+function withProfile(cmd) {
+  return cmd.option('-p, --profile <name>', 'Use a specific config profile');
+}
+
+withProfile(program.command('create'))
   .description('Create a new VM for the current project directory')
-  .action(create);
+  .action((options) => create(options));
 
-program
-  .command('enter')
+withProfile(program.command('enter'))
   .description('Enter the VM shell (auto-starts if stopped)')
-  .action(enter);
+  .action((options) => enter(options));
 
-program
-  .command('start')
+withProfile(program.command('start'))
   .description('Start a stopped VM')
-  .action(start);
+  .action((options) => start(options));
 
-program
-  .command('stop')
+withProfile(program.command('stop'))
   .description('Stop a running VM')
-  .action(stop);
+  .action((options) => stop(options));
 
-program
-  .command('delete')
+withProfile(program.command('delete'))
   .description('Delete the VM (with confirmation)')
-  .action(del);
+  .action((options) => del(options));
 
-program
-  .command('recreate')
+withProfile(program.command('recreate'))
   .description('Delete and recreate the VM (applies config changes)')
-  .action(recreate);
+  .action((options) => recreate(options));
 
 program
   .command('status')

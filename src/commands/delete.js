@@ -1,5 +1,6 @@
 import { resolveContext, confirm, handleError } from './helpers.js';
 import { limaStatus, limaStop, limaDelete } from '../lima.js';
+import { unregisterVm } from '../registry.js';
 
 // ---------------------------------------------------------------------------
 // pi-sandbox delete
@@ -11,9 +12,9 @@ import { limaStatus, limaStop, limaDelete } from '../lima.js';
 // (<projectDir>/.pi-sandbox/sessions/), not inside the VM.
 // ---------------------------------------------------------------------------
 
-export async function del() {
+export async function del(options = {}) {
   try {
-    const { vmName } = resolveContext();
+    const { vmName } = resolveContext(options);
 
     const status = limaStatus(vmName);
 
@@ -40,6 +41,9 @@ export async function del() {
     console.log(`Deleting sandbox '${vmName}'...`);
     limaDelete(vmName);
     console.log(`Sandbox '${vmName}' has been deleted.`);
+
+    // Remove from registry
+    unregisterVm(vmName);
 
   } catch (err) {
     handleError(err);

@@ -8,9 +8,9 @@ import { limaStatus, limaResume } from '../lima.js';
 // for that.
 // ---------------------------------------------------------------------------
 
-export async function start() {
+export async function start(options = {}) {
   try {
-    const { vmName } = resolveContext();
+    const { vmName } = resolveContext(options);
 
     const status = limaStatus(vmName);
 

@@ -106,8 +106,8 @@ export function loadConfig() {
 // paths (~ expansion).
 // ---------------------------------------------------------------------------
 
-export function resolveProfile(config) {
-  const profileName = config.activeProfile || 'default';
+export function resolveProfile(config, profileNameOverride) {
+  const profileName = profileNameOverride || config.activeProfile || 'default';
   const defaultProfile = DEFAULTS.profiles.default;
   const userProfile = config.profiles?.[profileName];
 

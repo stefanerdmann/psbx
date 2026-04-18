@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os';
 import { resolveContext, handleError } from './helpers.js';
 import { limaStatus, limaStart } from '../lima.js';
 import { writeLimaYaml } from '../template.js';
+import { validateConfig, printValidation } from '../validate.js';
+import { registerVm } from '../registry.js';
 
 // ---------------------------------------------------------------------------
 // pi-sandbox create
@@ -23,9 +25,15 @@ import { writeLimaYaml } from '../template.js';
 // VM deletion.
 // ---------------------------------------------------------------------------
 
-export async function create() {
+export async function create(options = {}) {
   try {
-    const { profile, vmName, projectDir } = resolveContext();
+    const { profile, vmName, projectDir } = resolveContext(options);
+
+    // Validate config before attempting VM creation
+    const validation = validateConfig(profile);
+    if (!printValidation(validation)) {
+      process.exit(1);
+    }
 
     // Check for collision — VM names derive from directory basename,
     // so two projects named "app" would collide (Pitfall #10).
@@ -67,6 +75,9 @@ export async function create() {
     console.log('');
     console.log(`Sandbox '${vmName}' is ready!`);
     console.log('Run `pi-sandbox enter` to start working.');
+
+    // Register VM in the registry for `list` command
+    registerVm(vmName, projectDir);
 
   } catch (err) {
     handleError(err);

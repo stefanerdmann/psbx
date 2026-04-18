@@ -16,9 +16,9 @@ import { limaStatus, limaResume, limaShell } from '../lima.js';
 // leakage (Pitfall #9).
 // ---------------------------------------------------------------------------
 
-export async function enter() {
+export async function enter(options = {}) {
   try {
-    const { profile, vmName } = resolveContext();
+    const { profile, vmName } = resolveContext(options);
 
     const status = limaStatus(vmName);
 

@@ -1,21 +1,37 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
-import { loadConfig, resolveProfile, getVmName } from '../config.js';
+import { loadConfig, resolveProfile, getVmName, deepMerge } from '../config.js';
 import { LimaError } from '../lima.js';
 
 // ---------------------------------------------------------------------------
-// resolveContext()
+// resolveContext(options)
 //
 // Common pre-check used by all commands. Loads config, resolves the active
-// profile, and derives the VM name from the current directory.
+// profile (with optional --profile override), applies project-level overrides
+// from .pi-sandbox.json, and derives the VM name from the current directory.
 // Returns everything a command needs to get started.
 // ---------------------------------------------------------------------------
 
-export function resolveContext() {
+export function resolveContext(options = {}) {
   const config = loadConfig();
-  const profile = resolveProfile(config);
+  let profile = resolveProfile(config, options.profile);
   const vmName = getVmName();
   const projectDir = process.cwd();
+
+  // Apply project-level overrides if .pi-sandbox.json exists in the project dir.
+  // Only profile fields (vm, cert, pi, mcp) are overridable — not activeProfile
+  // or the profiles list.
+  try {
+    const overridePath = join(projectDir, '.pi-sandbox.json');
+    const raw = readFileSync(overridePath, 'utf-8');
+    const projectOverrides = JSON.parse(raw);
+    profile = deepMerge(profile, projectOverrides);
+  } catch {
+    // No project overrides — that's normal
+  }
+
   return { config, profile, vmName, projectDir };
 }
 

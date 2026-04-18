@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os';
 import { resolveContext, confirm, handleError } from './helpers.js';
 import { limaStatus, limaStop, limaDelete, limaStart } from '../lima.js';
 import { writeLimaYaml } from '../template.js';
+import { validateConfig, printValidation } from '../validate.js';
+import { registerVm, unregisterVm } from '../registry.js';
 
 // ---------------------------------------------------------------------------
 // pi-sandbox recreate
@@ -15,9 +17,15 @@ import { writeLimaYaml } from '../template.js';
 // Auth tokens, MCP config, and settings are re-provisioned from the host.
 // ---------------------------------------------------------------------------
 
-export async function recreate() {
+export async function recreate(options = {}) {
   try {
-    const { profile, vmName, projectDir } = resolveContext();
+    const { profile, vmName, projectDir } = resolveContext(options);
+
+    // Validate config before attempting rebuild
+    const validation = validateConfig(profile);
+    if (!printValidation(validation)) {
+      process.exit(1);
+    }
 
     const status = limaStatus(vmName);
 
@@ -46,6 +54,7 @@ export async function recreate() {
 
     console.log(`Deleting sandbox '${vmName}'...`);
     limaDelete(vmName);
+    unregisterVm(vmName);
 
     // --- Rebuild ---
 
@@ -76,6 +85,9 @@ export async function recreate() {
     console.log('');
     console.log(`Sandbox '${vmName}' has been recreated!`);
     console.log('Run `pi-sandbox enter` to start working.');
+
+    // Re-register in registry
+    registerVm(vmName, projectDir);
 
   } catch (err) {
     handleError(err);
