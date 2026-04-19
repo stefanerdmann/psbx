@@ -17,7 +17,7 @@ const program = new Command();
 program
   .name('pi-sandbox')
   .description('Manage per-project Lima VMs for the pi coding agent')
-  .version('0.1.0');
+  .version('0.2.0');
 
 // Helper to add --profile option to lifecycle commands
 function withProfile(cmd) {
