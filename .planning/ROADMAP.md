@@ -13,6 +13,7 @@
 | 2 | VM Lifecycle Commands | All CLI commands to create, manage, and destroy project VMs | VMLC-01, VMLC-02, VMLC-03, VMLC-04, VMLC-05, VMLC-06 | 4 |
 | 3 | Config Management & Observability | Init workflow, validation, profiles, project overrides, status/list/logs | CONF-02, CONF-03, CONF-04, CONF-05, OBSV-01, OBSV-02, OBSV-03 | 4 |
 | 4 | Documentation | Complete docs: quickstart, config reference, architecture, provisioning | DOCS-01, DOCS-02, DOCS-03, DOCS-04 | 3 |
+| 5 | Template Externalization | Extract Lima YAML + provisioning scripts from code into Handlebars templates | TMPL-01, TMPL-02, TMPL-03, TMPL-04 | 3 |
 
 ---
 
@@ -102,9 +103,24 @@
 
 ---
 
-## Requirement Coverage
+## Phase 5: Template Externalization
 
-All 24 v1 requirements mapped:
+**Goal:** Extract the Lima YAML config and provisioning scripts from programmatic JavaScript code into Handlebars template files. After this phase, the Lima VM configuration is readable as actual YAML/shell files with clear conditional blocks, instead of being hidden in JavaScript string builders.
+
+**Requirements:**
+- TMPL-01: Lima YAML config as a Handlebars template file (`templates/lima.yaml.hbs`) with placeholders and conditionals
+- TMPL-02: System provisioning script as a Handlebars template file (`templates/provision-system.sh.hbs`)
+- TMPL-03: User provisioning script as a Handlebars template file (`templates/provision-user.sh.hbs`)
+- TMPL-04: Update `src/template.js` to render templates via Handlebars instead of building JS objects, producing identical Lima YAML output
+
+**Success Criteria:**
+1. Template files are readable as near-valid YAML/shell — a colleague can open them and understand the VM setup without reading JavaScript
+2. Conditional sections (cert mount, cert provisioning, NODE_EXTRA_CA_CERTS) use `{{#if cert}}...{{/if}}` Handlebars syntax
+3. Generated Lima YAML is identical to the current programmatic output for both cert and no-cert profiles
+
+**UI hint**: no
+
+All 28 requirements mapped:
 
 | Phase | Requirements | Count |
 |---|---|---|
@@ -112,10 +128,11 @@ All 24 v1 requirements mapped:
 | Phase 2 | VMLC-01, VMLC-02, VMLC-03, VMLC-04, VMLC-05, VMLC-06 | 6 |
 | Phase 3 | CONF-02, CONF-03, CONF-04, CONF-05, OBSV-01, OBSV-02, OBSV-03 | 7 |
 | Phase 4 | DOCS-01, DOCS-02, DOCS-03, DOCS-04 | 4 |
-| **Total** | | **24** |
+| Phase 5 | TMPL-01, TMPL-02, TMPL-03, TMPL-04 | 4 |
+| **Total** | | **28** |
 
 Unmapped: 0 ✓
 
 ---
 *Roadmap created: 2026-04-17*
-*Last updated: 2026-04-17 after initial creation*
+*Last updated: 2026-04-19 after adding Phase 5*

@@ -1,15 +1,15 @@
 # Project State: pi-sandbox
 
-**Current phase:** Phase 4 — Documentation
-**Phase status:** Complete
-**Overall progress:** 4/4 phases complete
+**Current phase:** Phase 5 — Template Externalization
+**Phase status:** Not started
+**Overall progress:** 4/5 phases complete
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-04-17)
 
 **Core value:** One command creates a fully configured, isolated pi agent environment for any project
-**Current focus:** All phases complete
+**Current focus:** Phase 5 — Template Externalization
 
 ## Phase Progress
 
@@ -19,6 +19,7 @@ See: .planning/PROJECT.md (updated 2026-04-17)
 | 2 | VM Lifecycle Commands | ✓ Complete | 2/2 |
 | 3 | Config Management & Observability | ✓ Complete | 3/3 |
 | 4 | Documentation | ✓ Complete | 2/2 |
+| 5 | Template Externalization | ○ Pending | 0/0 |
 
 ## Completed Work
 
