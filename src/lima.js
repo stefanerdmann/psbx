@@ -202,7 +202,7 @@ export function limaList() {
 
 export function limaLogs(name) {
   const output = runLimactl(
-    ['shell', name, 'cat', '/var/log/cloud-init-output.log'],
+    ['shell', '--workdir=/', name, 'sudo', 'cat', '/var/log/cloud-init-output.log'],
     { mode: 'capture' }
   );
   return output || '';
