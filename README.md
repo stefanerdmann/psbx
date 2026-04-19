@@ -188,6 +188,8 @@ cp ~/.pi/agent/auth.json ~/.pi-sandbox/auth.json
 
 The configured certificate path doesn't exist. Check `cert.hostBundlePath` in `~/.pi-sandbox/config.json`. If you don't need corporate certs, set `cert` to `null`.
 
+**Symlink pitfall:** The path must point to the real file, not a symlink. Lima mounts the parent directory, and symlinks don't resolve across mount boundaries. Use `realpath <path>` to find the real path and put that in your config.
+
 ### `Warning: Environment variable X not set`
 
 MCP tokens aren't set in your shell. Export them before running pi-sandbox:

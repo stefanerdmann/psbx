@@ -86,6 +86,8 @@ update-ca-certificates
 
 **Why the cert is mounted from a directory, not the file:** Lima mounts directories, not individual files. The cert file's parent directory is mounted at `/mnt/host-cert-dir/` (read-only). The cert filename is dynamic (varies per machine), resolved from the config.
 
+**Symlink warning:** The `hostBundlePath` in the config must be the real file path, not a symlink. Lima mounts the parent directory of the configured path. If that path is a symlink, the parent directory of the symlink is mounted — not the parent directory of the symlink's target. The actual cert file won't be in the mount. Use `realpath <path>` to resolve symlinks before putting the path in the config.
+
 **What breaks without it:** All HTTPS-dependent operations fail in the VM when behind a corporate proxy.
 
 ### Base packages

@@ -1,15 +1,15 @@
 # Project State: pi-sandbox
 
-**Current phase:** Phase 3 — Config Management & Observability
+**Current phase:** Phase 4 — Documentation
 **Phase status:** Complete
-**Overall progress:** 3/4 phases complete
+**Overall progress:** 4/4 phases complete
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-04-17)
 
 **Core value:** One command creates a fully configured, isolated pi agent environment for any project
-**Current focus:** Phase 4 — Documentation
+**Current focus:** All phases complete
 
 ## Phase Progress
 
@@ -18,7 +18,7 @@ See: .planning/PROJECT.md (updated 2026-04-17)
 | 1 | Core Infrastructure | ✓ Complete | 2/2 |
 | 2 | VM Lifecycle Commands | ✓ Complete | 2/2 |
 | 3 | Config Management & Observability | ✓ Complete | 3/3 |
-| 4 | Documentation | ◆ Active | 0/2 |
+| 4 | Documentation | ✓ Complete | 2/2 |
 
 ## Completed Work
 
@@ -29,6 +29,8 @@ See: .planning/PROJECT.md (updated 2026-04-17)
 - Phase 3, Plan 3.1: Config validation, registry, --profile flag, project overrides
 - Phase 3, Plan 3.2: Observability commands (status, list, logs)
 - Phase 3, Plan 3.3: Init command
+- Phase 4, Plan 4.1: README + Config reference
+- Phase 4, Plan 4.2: Architecture + Provisioning docs
 
 ---
 *Last updated: 2026-04-17 after initialization*

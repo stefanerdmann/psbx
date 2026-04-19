@@ -179,7 +179,7 @@ Copying decouples each VM's authentication lifecycle from the host and from othe
 ### Why patch settings.json instead of symlinking
 
 The host's `settings.json` has `sessionDir` pointing to a host-relevant path (or the original `/pi/data/sessions`). Inside the VM, sessions must go to `/app/.pi-sandbox/sessions` so they persist in the project directory. We can't symlink because:
-1. The mount is read-only — can't modify the file
+1. The mount is read-only — can't modify the file (pi needs to lock settings.json)
 2. We need to change `sessionDir` — can't do that with a symlink
 
 The copy+patch approach reads the host's settings, changes one field, and writes it to the VM's config directory.

@@ -72,6 +72,8 @@ Certificate configuration for corporate proxy environments. Set to `null` (or om
 
 Absolute path to the CA certificate bundle file on the host. Supports `~` expansion.
 
+**Important:** This must be the real file path, not a symlink. Lima mounts the parent directory into the VM, and symlinks are not resolved across the mount boundary. If your cert path is a symlink, resolve it first: `realpath <path>`.
+
 **Example:** `"~/certs/corporate-ca.pem"` or `"/opt/certs/ca-bundle.pem"`
 
 **Validation:** `pi-sandbox create` will fail if this file doesn't exist. Error message tells you exactly which path to check.
