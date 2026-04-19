@@ -19,7 +19,7 @@ See: .planning/PROJECT.md (updated 2026-04-17)
 | 2 | VM Lifecycle Commands | ✓ Complete | 2/2 |
 | 3 | Config Management & Observability | ✓ Complete | 3/3 |
 | 4 | Documentation | ✓ Complete | 2/2 |
-| 5 | Template Externalization | ○ Pending | 0/0 |
+| 5 | Template Externalization | ◆ Active | 0/1 |
 
 ## Completed Work
 

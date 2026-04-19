@@ -1,0 +1,40 @@
+#!/bin/bash
+set -euo pipefail
+
+# ── Wait for system readiness ──────────────────────────────────────────
+
+# Wait until the package manager (apt) is unlocked.
+# cloud-init may still hold the lock when provisioning starts (Pitfall #1).
+while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 1; done
+
+# Wait until the host config mount is available.
+# virtiofs mounts may not be ready immediately on fast ARM Macs (Pitfall #2).
+until mountpoint -q /mnt/pi-host-config; do sleep 1; done
+{{#if cert}}
+
+# ── Certificate injection ──────────────────────────────────────────────
+# Corporate proxy/MITM certs must be trusted by ALL consumers:
+# apt, curl, git (use system certs), and Node.js (uses NODE_EXTRA_CA_CERTS).
+# We install into the system trust store so apt/curl/git work,
+# and set NODE_EXTRA_CA_CERTS in user provisioning for Node.js.
+
+apt-get update
+apt-get install -y ca-certificates
+cp /mnt/host-cert-dir/{{cert.fileName}} /usr/local/share/ca-certificates/host-cert.crt
+update-ca-certificates
+{{/if}}
+
+# ── Base packages ─────────────────────────────────────────────────────
+
+apt-get update
+apt-get install -y curl gnupg git
+
+# ── Node.js 22 (LTS) ─────────────────────────────────────────────────
+# Required by the pi coding agent. Installed via NodeSource.
+
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt-get install -y nodejs
+
+# ── Pi coding agent ──────────────────────────────────────────────────
+
+npm install -g @mariozechner/pi-coding-agent

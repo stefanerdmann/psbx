@@ -1,0 +1,63 @@
+#!/bin/bash
+set -euo pipefail
+
+# ── Session storage ───────────────────────────────────────────────────
+# Pi sessions are stored in the project directory so they survive VM
+# deletion. The /app mount is the host project dir (writable).
+
+mkdir -p /app/.pi-sandbox/sessions
+
+# ── Pi agent config directory ────────────────────────────────────────
+# ~/.pi/agent/ is where the pi agent looks for its configuration.
+
+mkdir -p ~/.pi/agent
+
+# ── Settings (copy + patch) ──────────────────────────────────────────
+# Copy host settings.json and patch sessionDir to point to the
+# project-local session directory. This way the user does not need
+# to think about guest paths — sessions just appear in their project.
+
+if [ -f /mnt/pi-host-config/settings.json ]; then
+  node -e "
+    const fs = require('fs');
+    const settings = JSON.parse(fs.readFileSync('/mnt/pi-host-config/settings.json', 'utf-8'));
+    settings.sessionDir = '/app/.pi-sandbox/sessions';
+    fs.writeFileSync(process.env.HOME + '/.pi/agent/settings.json', JSON.stringify(settings, null, 2));
+  "
+fi
+
+# ── Auth tokens (copy, not symlink) ──────────────────────────────────
+# Pi needs write access to auth.json for token refresh cycles.
+# Symlinking would write back to the host, and multiple VMs could
+# race on the same file. Copying decouples each VM's auth lifecycle.
+
+if [ -f /mnt/pi-host-config/auth.json ]; then
+  cp /mnt/pi-host-config/auth.json ~/.pi/agent/auth.json
+  chmod 600 ~/.pi/agent/auth.json
+fi
+
+# ── MCP config (copy if present) ─────────────────────────────────────
+
+if [ -f /mnt/pi-host-config/mcp.json ]; then
+  cp /mnt/pi-host-config/mcp.json ~/.pi/agent/mcp.json
+fi
+
+# ── npm global prefix ────────────────────────────────────────────────
+# Pi installs packages (extensions) globally via npm. Without a user-space
+# prefix, npm tries to write to /usr/lib which requires sudo and fails.
+
+mkdir -p ~/.npm-global
+npm config set prefix '~/.npm-global'
+
+# ── Shell environment (.bashrc) ──────────────────────────────────────
+
+# Add npm global bin to PATH so pi-installed packages are available.
+echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.bashrc
+{{#if cert}}
+
+# Tell Node.js to use system certificates (includes our corporate cert).
+echo 'export NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt' >> ~/.bashrc
+{{/if}}
+
+# Set default working directory to the mounted project.
+echo 'cd /app' >> ~/.bashrc
