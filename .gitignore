@@ -2,3 +2,4 @@
 node_modules/
 legacy/
 .pi/
+.pi-sandbox/.DS_Store
