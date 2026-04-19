@@ -33,54 +33,57 @@ Each module has a single responsibility:
 - **config.js** — Load config, merge defaults, resolve profiles, derive VM names
 - **validate.js** — Check that a profile's paths and dependencies exist before VM creation
 - **lima.js** — Thin wrapper around `limactl` subprocess calls with error handling
-- **template.js** — Build Lima YAML programmatically from a resolved profile
+- **template.js** — Render Handlebars templates into Lima YAML from a resolved profile
 - **registry.js** — Track which VMs belong to pi-sandbox (for `list` command)
 
-## YAML Generation: Why Programmatic, Not Templates
+## YAML Generation: Handlebars Templates
 
 ### Problem
 
-The original prototype used a YAML template with `${VAR}` placeholders, processed by `envsubst`:
-
-```yaml
-# Old approach (fragile)
-mounts:
-  - location: "${DYNAMIC_PROJECT_DIR}"
-    mountPoint: "/app"
-  - location: "${HOST_CERT_DIR}"    # Always present, even without cert!
-    mountPoint: "/mnt/host-cert-dir"
-```
-
-This had several problems:
-- **No conditionals:** The cert mount was always in the YAML, even when no cert was configured. This caused Lima errors.
-- **Fragile:** Missing env vars produced invalid YAML with empty strings.
-- **Hard to validate:** The template was just a string until envsubst ran — no way to check it programmatically.
-- **Hard to test:** You had to run the full envsubst pipeline to verify output.
+The original prototype used a YAML template with `${VAR}` placeholders, processed by `envsubst`. This had no support for conditionals — the cert mount was always present even without a cert, causing Lima errors. Missing env vars produced invalid YAML.
 
 ### Solution
 
-Build the Lima config as a JavaScript object and serialize with `js-yaml`:
+Three Handlebars template files that look like real YAML/shell with minimal template syntax:
 
-```js
-// New approach (template.js)
-const config = {
-  vmType: 'vz',
-  mounts: buildMounts(profile, projectDir),  // Conditional logic is just JS
-  provision: buildProvision(profile)          // Conditional cert is an if-statement
-};
-yaml.dump(config);
+```
+templates/
+  lima.yaml.hbs              # Lima VM config — mounts, resources, images
+  provision-system.sh.hbs    # Root provisioning script
+  provision-user.sh.hbs      # User provisioning script
 ```
 
-### Why this approach
+`src/template.js` reads these templates, renders them with Handlebars using values from the resolved config profile, and returns the final Lima YAML string.
 
-- **Conditional sections are natural:** `if (profile.cert)` in JavaScript vs impossible in YAML templates
-- **Validation before serialization:** The JS object can be inspected before becoming YAML
-- **Testable:** Import `buildLimaConfig()`, call it with test data, assert on the result
-- **No string corruption:** `yaml.dump()` handles escaping, quoting, and multi-line blocks correctly
+### Rendering flow
+
+```
+1. Render provision-system.sh.hbs  → system provisioning script string
+2. Render provision-user.sh.hbs   → user provisioning script string
+3. Indent both scripts (6 spaces for YAML block scalar embedding)
+4. Render lima.yaml.hbs           → final Lima YAML (receives scripts as context)
+```
+
+### Why Handlebars
+
+- **Readable:** Templates look like the actual Lima YAML / shell scripts. Open `templates/lima.yaml.hbs` and you immediately see the VM configuration.
+- **Conditionals:** `{{#if cert}}...{{/if}}` handles optional cert mounts and provisioning blocks cleanly.
+- **No arbitrary code:** Unlike EJS, Handlebars doesn't allow arbitrary JavaScript in templates. The template is declarative — logic stays in template.js.
+- **Standard:** Handlebars is the most widely used template engine for this pattern. Well-documented, stable.
+
+### Template syntax used
+
+| Syntax | Purpose | Example |
+|---|---|---|
+| `{{variable}}` | Value substitution | `cpus: {{vm.cpus}}` |
+| `{{#if x}}...{{/if}}` | Conditional block | Cert mount, cert provisioning |
+| `{{{triple}}}` | Raw output (no escaping) | Embedded provisioning scripts |
 
 ### What breaks if changed
 
-If you go back to string templating, you'll need to handle: conditional mounts, conditional provisioning blocks, proper YAML escaping of shell scripts with special characters, and validation of the assembled YAML. The programmatic approach handles all of these automatically.
+- Removing the templates and going back to JS string building makes the Lima config opaque again — you'd need to read JavaScript to understand what the VM gets.
+- The `envsubst` approach from the original prototype lacks conditionals and produces invalid YAML on missing variables.
+- EJS would work but mixes JavaScript logic into templates, reducing readability.
 
 ## Mount Strategy
 

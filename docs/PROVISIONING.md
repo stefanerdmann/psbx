@@ -1,6 +1,6 @@
 # Provisioning Deep-Dive
 
-This document walks through every provisioning script block, explaining what it does, WHY it exists, and what would break without it. Read this before modifying `src/template.js` or debugging a failed VM creation.
+This document walks through every provisioning script block, explaining what it does, WHY it exists, and what would break without it. Read this before modifying the templates in `templates/` or debugging a failed VM creation.
 
 ## Overview
 
@@ -9,7 +9,12 @@ When `pi-sandbox create` runs, it generates a Lima YAML config containing two pr
 1. **System provisioning** — runs as `root`, installs system packages and certificates
 2. **User provisioning** — runs as the `pi` user, sets up the pi agent environment
 
-Both scripts are generated programmatically by `src/template.js` based on the user's config profile. Sections are **conditional** — certificate handling is only included when `profile.cert` is configured.
+Both scripts live as Handlebars template files in the `templates/` directory:
+
+1. **`templates/provision-system.sh.hbs`** — runs as `root`, installs system packages and certificates
+2. **`templates/provision-user.sh.hbs`** — runs as the `pi` user, sets up the pi agent environment
+
+`src/template.js` renders these templates with values from the user's config profile. Conditional sections (certificate handling) use `{{#if cert}}...{{/if}}` Handlebars syntax — open the template files and the conditionals are immediately visible.
 
 **Provisioning runs once**, at VM creation. There is no way to re-run provisioning on an existing VM. To apply changes, use `pi-sandbox recreate` (which deletes and rebuilds the VM).
 
