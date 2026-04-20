@@ -17,7 +17,7 @@ A CLI tool that manages per-project [Lima](https://lima-vm.io) VMs for sandboxin
 ## Install
 
 ```bash
-npm install -g pi-sandbox
+npm install -g .
 ```
 
 ## Quick Start
