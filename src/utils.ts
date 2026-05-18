@@ -1,0 +1,74 @@
+/**
+ * Generic, dependency-free helpers shared across the codebase.
+ *
+ * Intent: keep small, widely-used primitives (error normalization, type
+ * guards, byte formatting) in one place so individual modules do not grow
+ * private copies and so behavior stays consistent (e.g. how an unknown
+ * error is converted to a string).
+ */
+
+import { existsSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+/** Narrow an `unknown` to a plain (non-array, non-null) object. */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** Convert any thrown value into a human-readable message. */
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+/**
+ * Render a size value for human display. Pass-through for strings (Lima
+ * already returns formatted sizes like `"4GiB"`); converts numeric byte
+ * counts to a binary-prefix string with one decimal.
+ */
+function formatBytes(bytes: string | number | null | undefined): string {
+  if (bytes === undefined || bytes === null) return 'n/a';
+  if (typeof bytes === 'string') return bytes;
+  if (typeof bytes !== 'number' || Number.isNaN(bytes)) return 'n/a';
+
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let i = 0;
+  let size = bytes;
+  while (size >= 1024 && i < units.length - 1) {
+    size /= 1024;
+    i++;
+  }
+  return `${size.toFixed(1)} ${units[i]}`;
+}
+
+/**
+ * Wrap a string in POSIX single quotes, escaping any embedded single quotes
+ * using the standard `'"'"'` idiom so the result is safe to pass through a
+ * POSIX shell without interpretation of special characters.
+ *
+ * Used both when building `limactl shell` arguments and when generating
+ * inline shell scripts in finalize.ts.
+ */
+function shellQuote(s: string): string {
+  return `'${String(s).replaceAll("'", "'\"'\"'")}'`;
+}
+
+/**
+ * Locate the package root directory by walking up from the current module
+ * until a directory containing `package.json` is found. Works correctly
+ * whether running from source (`src/`) or from compiled output (`dist/src/`).
+ */
+function packageRoot(): string {
+  const start = dirname(fileURLToPath(import.meta.url));
+  let dir = start;
+  while (true) {
+    if (existsSync(join(dir, 'package.json'))) return dir;
+    const parent = resolve(dir, '..');
+    if (parent === dir) {
+      throw new Error(`Could not find package root from ${start}`);
+    }
+    dir = parent;
+  }
+}
+
+export { errorMessage, formatBytes, isPlainObject, packageRoot, shellQuote };

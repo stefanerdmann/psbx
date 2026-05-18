@@ -1,5 +1,9 @@
-import { resolveContext, handleError } from './helpers.js';
-import { limaStatus, limaStop } from '../lima.js';
+import { limaStop } from '../lima.ts';
+import { assertVmExists, handleError, resolveContext } from './helpers.ts';
+
+interface StopOptions {
+  force?: boolean;
+}
 
 // ---------------------------------------------------------------------------
 // pi-sandbox stop
@@ -8,16 +12,10 @@ import { limaStatus, limaStop } from '../lima.js';
 // to resume it later.
 // ---------------------------------------------------------------------------
 
-export async function stop(options = {}) {
+export async function stop(options: StopOptions = {}): Promise<void> {
   try {
-    const { vmName } = resolveContext(options);
-
-    const status = limaStatus(vmName);
-
-    if (status === null) {
-      console.error(`Error: Sandbox '${vmName}' does not exist.`);
-      process.exit(1);
-    }
+    const { vmName } = resolveContext();
+    const status = assertVmExists(vmName);
 
     if (status !== 'Running') {
       console.log(`Sandbox '${vmName}' is already stopped.`);
@@ -25,10 +23,9 @@ export async function stop(options = {}) {
     }
 
     console.log(`Stopping sandbox '${vmName}'...`);
-    limaStop(vmName);
+    limaStop(vmName, { force: options.force });
     console.log(`Sandbox '${vmName}' has been stopped.`);
-
-  } catch (err) {
+  } catch (err: unknown) {
     handleError(err);
   }
 }
