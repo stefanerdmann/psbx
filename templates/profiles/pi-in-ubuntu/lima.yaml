@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=./lima.schema.json
+user:
+  name: pi
+  home: /home/pi
+base:
+  - template:_images/ubuntu
+
+# To pin a specific image version, uncomment images and set both location and digest.
+# Find the digest for your chosen image and keep it with the URL so VM rebuilds are reproducible.
+# images:
+#   - location: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-arm64.img
+#     digest: sha256:replace-with-the-image-digest
+
+# Inject host CA certificate files into the VM trust store. This is commonly used
+# in corporate environments where HTTPS traffic is re-signed by an internal CA.
+# caCerts:
+#   files:
+#     - "~/path/to/my-corporate-ca.pem"
+
+# cpus: 4
+# memory: "8GiB"
+# disk: "50GiB"
+
+# Enable nested virtualization when your host supports it. macOS users can check
+# support with:
+# swift -e 'import Virtualization; print(VZGenericPlatformConfiguration.isNestedVirtualizationSupported)'
+# nestedVirtualization: true
+
+provision:
+  - mode: system
+    file: ./provision-system.sh
+  - mode: user
+    file: ./provision-user.sh

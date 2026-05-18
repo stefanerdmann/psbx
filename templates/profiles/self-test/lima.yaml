@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=./lima.schema.json
+user:
+  name: pi
+  home: /home/pi
+base:
+  - template:_images/alpine
+cpus: 2
+memory: "512MiB"
+disk: "10GiB"
+containerd:
+  system: false
+  user: false
+provision:
+  - mode: system
+    file: ./provision-system.sh
+  - mode: user
+    file: ./provision-user.sh
