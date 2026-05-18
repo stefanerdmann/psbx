@@ -8,7 +8,8 @@ export const HELP_TEXT =
   '  - Finalizer drift requires an in-place re-finalize on next `up`\n' +
   '  - shellEnvAllowlist / defaultCmd drift is picked up live on next exec/up';
 
-import { getProfilesDir, loadEnv } from '../config.ts';
+import { join } from 'node:path';
+import { getProfilesDir, LIMA_FILE, loadEnv } from '../config.ts';
 import { limaList, limaStatus } from '../lima.ts';
 import type { EnvConfig, LimaInstance, Profile, RegistryEntry, SyncDriftItem } from '../types.ts';
 import { formatBytes } from '../utils.ts';
@@ -92,6 +93,7 @@ function computeSyncDrift(
     ...env,
     name: registryEntry.profile,
     dir: profileDir,
+    limaPath: join(profileDir, LIMA_FILE),
   } as Profile;
 
   const drift: SyncDriftItem[] = [];
