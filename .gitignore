@@ -1,5 +1,6 @@
 .planning/
 node_modules/
 legacy/
-.pi/
+.agents/
 .pi-sandbox/.DS_Store
+dist/

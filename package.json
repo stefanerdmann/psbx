@@ -1,14 +1,14 @@
 {
   "name": "pi-sandbox",
   "version": "0.2.0",
-  "description": "CLI tool for managing per-project Lima VMs that sandbox the pi coding agent on macOS ARM",
+  "description": "CLI tool for managing per-project Lima VMs that sandbox the pi coding agent",
   "type": "module",
   "bin": {
-    "pi-sandbox": "./bin/pi-sandbox.js"
+    "pi-sandbox": "./dist/bin/pi-sandbox.js"
   },
   "files": [
-    "bin/",
-    "src/",
+    "dist/bin/",
+    "dist/src/",
     "templates/"
   ],
   "keywords": [
@@ -18,12 +18,29 @@
     "vm",
     "coding-agent"
   ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "prepare": "npm run build",
+    "format": "biome check --write .",
+    "test": "node --test test/commands.test.ts test/unit/*.test.ts test/lifecycle.test.ts",
+    "test:all": "node --test test/commands.test.ts test/unit/*.test.ts test/lifecycle.test.ts",
+    "test:fast": "node --test test/commands.test.ts test/unit/*.test.ts",
+    "test:slow": "node --test test/lifecycle.test.ts",
+    "prepublishOnly": "npm run build"
+  },
   "license": "MIT",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=26.0.0"
   },
   "dependencies": {
     "commander": "^13.0.0",
-    "handlebars": "^4.7.9"
+    "yaml": "^2.7.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.14",
+    "@types/node": "^25.8.0",
+    "lefthook": "^2.1.6",
+    "typescript": "^6.0.3"
   }
 }
