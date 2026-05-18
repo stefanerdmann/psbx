@@ -1,11 +1,11 @@
 /**
- * `psbx exec` — run a one-off command (or open a plain shell) inside
- * an existing project sandbox.  Resolves the bound profile live so changes
- * to `shellEnvAllowlist` / `defaultCmd` take effect immediately, without a
- * VM recreate.  If the profile has been deleted or renamed, exec degrades
- * gracefully to a shell with no environment passthrough rather than hard
- * failing — the user still needs a way to recover state.
+ * Resolves the bound profile live so changes to `shellEnvAllowlist` /
+ * `defaultCmd` take effect immediately without a VM recreate.  If the
+ * profile has been deleted or renamed, exec degrades gracefully to a shell
+ * with no environment passthrough rather than hard failing.
  */
+
+export const DESCRIPTION = 'Run a one-off command in the sandbox (auto-starts if stopped)';
 
 import { getVmName, loadConfig, resolveProfile } from '../config.ts';
 import { limaCheckProvisioning, limaResume, limaShell } from '../lima.ts';

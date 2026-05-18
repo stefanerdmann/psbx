@@ -41,7 +41,7 @@ If you have a pi configured on the host `~/.pi/agent/.`, you can optionally add 
 `--copy-from-host` or `--symlink-from-host`.
 
 Then launch a sandbox from any project directory:
-```
+```bash
 cd ~/projects/my-project
 psbx up
 ```

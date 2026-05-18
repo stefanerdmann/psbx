@@ -2,22 +2,16 @@ import { limaDelete, limaStatus } from '../lima.ts';
 import { getRegistry, unregisterVm } from '../registry.ts';
 import { assertVmExists, confirm, handleError, resolveContext, stopIfRunning } from './helpers.ts';
 
+export const DESCRIPTION = 'Delete a VM (with confirmation)';
+
+export const HELP_TEXT =
+  'Session data survives deletion because it lives in the project directory\n' +
+  '(<projectDir>/.agents/sessions/), not inside the VM.';
+
 interface DeleteOptions {
   force?: boolean;
   allRegistered?: boolean;
 }
-
-// ---------------------------------------------------------------------------
-// psbx delete [vm-name]
-//
-// Deletes the VM for the current project (or a named VM). Prompts for
-// confirmation first. If the VM is running, it's stopped before deletion.
-//
-// --all-registered deletes every VM in the registry.
-//
-// Session data survives deletion because it lives in the project directory
-// (<projectDir>/.agents/sessions/), not inside the VM.
-// ---------------------------------------------------------------------------
 
 function destroyVm(vmName: string): void {
   stopIfRunning(vmName);

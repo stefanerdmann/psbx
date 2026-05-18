@@ -8,23 +8,66 @@
  */
 
 import { Command } from 'commander';
-import { cacheStatus, deleteCacheCommand, listCaches } from '../src/commands/cache.ts';
-import { completion } from '../src/commands/completion.ts';
-import { del } from '../src/commands/delete.ts';
-import { deleteProfile } from '../src/commands/delete-profile.ts';
-import { editProfile } from '../src/commands/edit-profile.ts';
-import { exec } from '../src/commands/exec.ts';
+import {
+  DELETE_DESCRIPTION as CACHE_DELETE_DESCRIPTION,
+  DESCRIPTION as CACHE_DESCRIPTION,
+  LIST_DESCRIPTION as CACHE_LIST_DESCRIPTION,
+  STATUS_DESCRIPTION as CACHE_STATUS_DESCRIPTION,
+  cacheStatus,
+  deleteCacheCommand,
+  listCaches,
+} from '../src/commands/cache.ts';
+import {
+  DESCRIPTION as COMPLETION_DESCRIPTION,
+  HELP_TEXT as COMPLETION_HELP_TEXT,
+  completion,
+} from '../src/commands/completion.ts';
+import {
+  DESCRIPTION as DELETE_DESCRIPTION,
+  HELP_TEXT as DELETE_HELP_TEXT,
+  del,
+} from '../src/commands/delete.ts';
+import {
+  DESCRIPTION as DELETE_PROFILE_DESCRIPTION,
+  deleteProfile,
+} from '../src/commands/delete-profile.ts';
+import {
+  DESCRIPTION as EDIT_PROFILE_DESCRIPTION,
+  editProfile,
+} from '../src/commands/edit-profile.ts';
+import { DESCRIPTION as EXEC_DESCRIPTION, exec } from '../src/commands/exec.ts';
 import { setGlobalYes } from '../src/commands/helpers.ts';
-import { init } from '../src/commands/init.ts';
-import { list } from '../src/commands/list.ts';
-import { listProfiles } from '../src/commands/list-profile.ts';
-import { logs } from '../src/commands/logs.ts';
-import { profileFork } from '../src/commands/profile-fork.ts';
-import { restart } from '../src/commands/restart.ts';
-import { setDefault } from '../src/commands/set-default-profile.ts';
-import { status } from '../src/commands/status.ts';
-import { stop } from '../src/commands/stop.ts';
-import { up } from '../src/commands/up.ts';
+import {
+  DESCRIPTION as INIT_DESCRIPTION,
+  HELP_TEXT as INIT_HELP_TEXT,
+  init,
+} from '../src/commands/init.ts';
+import { DESCRIPTION as LIST_DESCRIPTION, list } from '../src/commands/list.ts';
+import {
+  DESCRIPTION as LIST_PROFILES_DESCRIPTION,
+  listProfiles,
+} from '../src/commands/list-profile.ts';
+import { DESCRIPTION as LOGS_DESCRIPTION, logs } from '../src/commands/logs.ts';
+import {
+  DESCRIPTION as PROFILE_FORK_DESCRIPTION,
+  profileFork,
+} from '../src/commands/profile-fork.ts';
+import { DESCRIPTION as RESTART_DESCRIPTION, restart } from '../src/commands/restart.ts';
+import {
+  DESCRIPTION as SET_DEFAULT_DESCRIPTION,
+  setDefault,
+} from '../src/commands/set-default-profile.ts';
+import {
+  DESCRIPTION as STATUS_DESCRIPTION,
+  HELP_TEXT as STATUS_HELP_TEXT,
+  status,
+} from '../src/commands/status.ts';
+import { DESCRIPTION as STOP_DESCRIPTION, stop } from '../src/commands/stop.ts';
+import {
+  DESCRIPTION as UP_DESCRIPTION,
+  HELP_TEXT as UP_HELP_TEXT,
+  up,
+} from '../src/commands/up.ts';
 
 interface GlobalOptions {
   yes?: boolean;
@@ -100,7 +143,8 @@ program
 
 program
   .command('up')
-  .description('Bring sandbox up: create, start, and enter in one step')
+  .description(UP_DESCRIPTION)
+  .addHelpText('after', `\n${UP_HELP_TEXT}`)
   .option('-p, --profile <name>', 'Use a specific profile')
   .option('--shell', 'Open a plain shell instead of running the default command')
   .option('--only-create', 'Only create the VM (fail if it already exists)')
@@ -117,19 +161,19 @@ program
 
 program
   .command('stop')
-  .description('Stop a running VM')
+  .description(STOP_DESCRIPTION)
   .option('-f, --force', 'Force stop without graceful shutdown')
   .action((options: StopOptions): Promise<void> => stop(options));
 
 program
   .command('restart')
-  .description('Stop and then start the VM (without re-entering the shell)')
+  .description(RESTART_DESCRIPTION)
   .option('-f, --force', 'Force stop without graceful shutdown')
   .action((options: StopOptions): Promise<void> => restart(options));
 
 program
   .command('exec')
-  .description('Run a one-off command in the sandbox (auto-starts if stopped)')
+  .description(EXEC_DESCRIPTION)
   .option('--shell', 'Open a plain shell instead of running a command')
   .allowUnknownOption(true)
   .allowExcessArguments(true)
@@ -139,7 +183,8 @@ program
 
 program
   .command('delete')
-  .description('Delete a VM (with confirmation)')
+  .description(DELETE_DESCRIPTION)
+  .addHelpText('after', `\n${DELETE_HELP_TEXT}`)
   .argument('[vm-name]', 'Name of the VM to delete (defaults to current project VM)')
   .option('-f, --force', 'Skip confirmation prompt')
   .option('--all-registered', 'Delete all registered VMs')
@@ -147,19 +192,17 @@ program
     (vmName: string | undefined, options: DeleteOptions): Promise<void> => del(vmName, options),
   );
 
-const cacheCmd = program
-  .command('cache')
-  .description('Manage hidden profile caches (list, status, delete)');
+const cacheCmd = program.command('cache').description(CACHE_DESCRIPTION);
 
 cacheCmd
   .command('list')
   .alias('ls')
-  .description('List all profile caches')
+  .description(CACHE_LIST_DESCRIPTION)
   .action((): Promise<void> => listCaches());
 
 cacheCmd
   .command('status')
-  .description('Show whether the current project already has a matching profile cache')
+  .description(CACHE_STATUS_DESCRIPTION)
   .option(
     '-p, --profile <name>',
     'Use a specific profile instead of the current project registry/default',
@@ -168,7 +211,7 @@ cacheCmd
 
 cacheCmd
   .command('delete')
-  .description('Delete the matching profile cache for the current project')
+  .description(CACHE_DELETE_DESCRIPTION)
   .option(
     '-p, --profile <name>',
     'Use a specific profile instead of the current project registry/default',
@@ -184,7 +227,8 @@ const profileCmd = program
 
 profileCmd
   .command('init <profile>')
-  .description('Initialize a psbx profile')
+  .description(INIT_DESCRIPTION)
+  .addHelpText('after', `\n${INIT_HELP_TEXT}`)
   .option('--from-profile <name>', 'Copy an existing profile')
   .option(
     '--template <name>',
@@ -198,14 +242,12 @@ profileCmd
 
 profileCmd
   .command('fork <new-profile>')
-  .description(
-    "Snapshot the current project VM's profile (plus exfiltrated guest config) into a new profile and rebase the VM onto it",
-  )
+  .description(PROFILE_FORK_DESCRIPTION)
   .action((newProfile: string): Promise<void> => profileFork(newProfile));
 
 profileCmd
   .command('delete')
-  .description('Delete a profile')
+  .description(DELETE_PROFILE_DESCRIPTION)
   .argument('[name]', 'Profile name to delete')
   .option('-f, --force', 'Skip confirmation prompt')
   .option('--all', 'Delete all profiles')
@@ -217,18 +259,18 @@ profileCmd
 profileCmd
   .command('list')
   .alias('ls')
-  .description('List all profiles')
+  .description(LIST_PROFILES_DESCRIPTION)
   .option('--plain', 'Output bare profile names (no markers or messages)')
   .action((options: ListProfilesOptions): Promise<void> => listProfiles(options));
 
 profileCmd
   .command('set-default <name>')
-  .description('Set the default profile')
+  .description(SET_DEFAULT_DESCRIPTION)
   .action((name: string): Promise<void> => setDefault(name));
 
 profileCmd
   .command('edit [profile]')
-  .description('Open a profile in $EDITOR')
+  .description(EDIT_PROFILE_DESCRIPTION)
   .option('--file <file>', 'Open a specific file (lima, env, or path relative to profile)')
   .action(
     (profile: string | undefined, options: EditProfileOptions): Promise<void> =>
@@ -239,35 +281,27 @@ profileCmd
 
 program
   .command('status')
-  .description('Show VM status, environment, and sync state for the current project')
+  .description(STATUS_DESCRIPTION)
+  .addHelpText('after', `\n${STATUS_HELP_TEXT}`)
   .option('--json', 'Output as JSON')
   .action((opts: StatusOptions): Promise<void> => status(opts));
 
 program
   .command('list')
   .alias('ls')
-  .description('List all psbx VMs')
+  .description(LIST_DESCRIPTION)
   .option('--prune', 'Remove stale entries (VM and project dir both gone)')
   .action((options: ListOptions): Promise<void> => list(options));
 
 program
   .command('completion [shell]')
-  .description('Generate shell completion scripts (bash, zsh, fish)')
-  .addHelpText(
-    'after',
-    '\n' +
-      'Auto-detects shell from $SHELL when no argument given.\n\n' +
-      '  bash:   eval "$(psbx completion bash)"   # add to ~/.bashrc\n' +
-      '  zsh:    mkdir -p ~/.local/share/zsh/completions/completions && psbx completion zsh > ~/.local/share/zsh/completions/_psbx\n' +
-      '          # and add to ~/.zshrc (before compinit): fpath+=(~/.local/share/zsh/completions/completions)\n' +
-      '          # alternatively (after compinit): eval "$(psbx completion zsh)"\n' +
-      '  fish:   psbx completion fish > ~/.config/fish/completions/psbx.fish',
-  )
+  .description(COMPLETION_DESCRIPTION)
+  .addHelpText('after', `\n${COMPLETION_HELP_TEXT}`)
   .action((shell: string | undefined): Promise<void> => completion(shell));
 
 program
   .command('logs')
-  .description('Show cloud-init provisioning logs for the project VM and its profile cache VM')
+  .description(LOGS_DESCRIPTION)
   .action((): Promise<void> => logs());
 
 program.parse();

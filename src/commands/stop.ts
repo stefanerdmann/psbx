@@ -1,16 +1,11 @@
 import { limaStop } from '../lima.ts';
 import { assertVmExists, handleError, resolveContext } from './helpers.ts';
 
+export const DESCRIPTION = 'Stop a running VM';
+
 interface StopOptions {
   force?: boolean;
 }
-
-// ---------------------------------------------------------------------------
-// psbx stop
-//
-// Stops a running VM. The VM state is preserved — use `start` or `enter`
-// to resume it later.
-// ---------------------------------------------------------------------------
 
 export async function stop(options: StopOptions = {}): Promise<void> {
   try {

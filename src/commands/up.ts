@@ -1,19 +1,15 @@
-/**
- * `psbx up` — bring a sandbox to a "ready" state in one command.
- *
- * Flow:
- *   1. **create** when no VM exists yet (clone from the profile cache,
- *      finalize, register).
- *   2. **recreate** when the VM exists but is inconsistent with the
- *      registry (different profile, drifted Lima config, partial
- *      finalization).
- *   3. **start** when the VM exists, is consistent, and is stopped.
- *   4. **shell** at the end — running the profile's `defaultCmd` or a
- *      plain interactive shell with `--shell`.
- *
- * The `--only-create / --only-recreate / --only-start / --force-recreate`
- * flags pin the flow to a specific phase and are mutually exclusive.
- */
+/** Resolves the sandbox lifecycle (create → recreate → start → shell). */
+
+export const DESCRIPTION = 'Bring sandbox up: create, start, and enter in one step';
+
+export const HELP_TEXT =
+  'Flow:\n' +
+  '  1. create   — when no VM exists yet (clone from profile cache, finalize, register)\n' +
+  '  2. recreate — when the VM exists but is inconsistent with the registry\n' +
+  '  3. start    — when the VM exists, is consistent, and is stopped\n' +
+  '  4. shell    — run the profile defaultCmd or open a plain shell with --shell\n\n' +
+  'The --only-create / --only-recreate / --only-start / --force-recreate flags\n' +
+  'pin the flow to a specific phase and are mutually exclusive.';
 
 import { realpathSync } from 'node:fs';
 import { cloneVmFromProfileCache } from '../cache.ts';

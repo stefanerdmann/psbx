@@ -1,14 +1,19 @@
 /**
- * `psbx completion [bash|zsh|fish]` — emit a static completion
- * script for the given shell on stdout. Auto-detects the shell from
- * `$SHELL` when no argument is given.
- *
  * The completion scripts are hand-maintained string constants rather than
  * being generated from commander's metadata: commander's auto-generated
  * completions don't cover nested subcommands (cache/profile) or shell out
- * to `psbx profile list --plain` for dynamic profile-name
- * completion, both of which we want.
+ * to `psbx profile list --plain` for dynamic profile-name completion.
  */
+
+export const DESCRIPTION = 'Generate shell completion scripts (bash, zsh, fish)';
+
+export const HELP_TEXT =
+  'Auto-detects shell from $SHELL when no argument given.\n\n' +
+  '  bash:   eval "$(psbx completion bash)"   # add to ~/.bashrc\n' +
+  '  zsh:    mkdir -p ~/.local/share/zsh/completions/completions && psbx completion zsh > ~/.local/share/zsh/completions/_psbx\n' +
+  '          # and add to ~/.zshrc (before compinit): fpath+=(~/.local/share/zsh/completions/completions)\n' +
+  '          # alternatively (after compinit): eval "$(psbx completion zsh)"\n' +
+  '  fish:   psbx completion fish > ~/.config/fish/completions/psbx.fish';
 
 import { handleError } from './helpers.ts';
 

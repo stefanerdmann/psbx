@@ -1,13 +1,12 @@
-/**
- * `psbx status [--json]` — show the current project VM's status,
- * profile-derived environment, and drift between the registry-stored
- * hashes and the current profile state.
- *
- * Drift is split by impact: Lima config drift requires a recreate;
- * finalizer drift only requires an in-place re-finalize on next `up`;
- * shellEnvAllowlist / defaultCmd drift is picked up live on the next
- * `exec`/`up` shell launch without any reconfiguration.
- */
+/** Detects drift between registry-stored hashes and current profile state. */
+
+export const DESCRIPTION = 'Show VM status, environment, and sync state for the current project';
+
+export const HELP_TEXT =
+  'Drift is split by impact:\n' +
+  '  - Lima config drift requires a recreate\n' +
+  '  - Finalizer drift requires an in-place re-finalize on next `up`\n' +
+  '  - shellEnvAllowlist / defaultCmd drift is picked up live on next exec/up';
 
 import { getProfilesDir, loadEnv } from '../config.ts';
 import { limaList, limaStatus } from '../lima.ts';

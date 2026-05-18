@@ -1,7 +1,4 @@
 /**
- * `psbx cache list | status | delete` — management surface for the
- * per-profile clone-source VMs that `up` clones project VMs from.
- *
  * Caches are content-addressed: their identity is derived from the rendered
  * cache Lima YAML plus a small set of cache-safe inputs (Lima version,
  * provisioning script contents, CA cert contents). Two profiles producing
@@ -9,6 +6,12 @@
  * underlying create/clone machinery; this module only exposes the user-
  * facing CLI surface.
  */
+
+export const DESCRIPTION = 'Manage hidden profile caches (list, status, delete)';
+export const LIST_DESCRIPTION = 'List all profile caches';
+export const STATUS_DESCRIPTION =
+  'Show whether the current project already has a matching profile cache';
+export const DELETE_DESCRIPTION = 'Delete the matching profile cache for the current project';
 
 import { profileCacheInputs, stopAndDeleteCache } from '../cache.ts';
 import { resolveProfile } from '../config.ts';

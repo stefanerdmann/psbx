@@ -1,11 +1,10 @@
 /**
- * `psbx profile delete <name> [--all]` — remove a profile directory
- * from `~/.psbx/profiles/`.
- *
  * Profile caches are content-addressed (and may be shared after
  * `profile fork`), so after deleting a profile we always sweep orphaned
  * caches that no live registry VM still references.
  */
+
+export const DESCRIPTION = 'Delete a profile';
 
 import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';

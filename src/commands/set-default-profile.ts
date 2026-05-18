@@ -1,11 +1,7 @@
 import { setDefaultProfile } from '../config.ts';
 import { handleError } from './helpers.ts';
 
-// ---------------------------------------------------------------------------
-// psbx profile set-default <name>
-//
-// Sets the default profile used when --profile is not specified.
-// ---------------------------------------------------------------------------
+export const DESCRIPTION = 'Set the default profile';
 
 export async function setDefault(profileName: string | undefined): Promise<void> {
   try {

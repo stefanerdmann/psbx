@@ -1,13 +1,16 @@
 /**
- * `psbx profile init` — create a new profile from a shipped template,
- * an existing profile, or the bundled self-test template.
- *
  * The profile is staged to a hidden sibling directory and atomically
  * renamed into place so that an interrupted init never leaves a partial
- * profile in `profiles/`.  Host config can be optionally copied or
- * symlinked into the profile for users who already have a configured
- * agent on the host.
+ * profile in `profiles/`.
  */
+
+export const DESCRIPTION = 'Initialize a psbx profile';
+
+export const HELP_TEXT =
+  'Creates a new profile from a shipped template, an existing profile, or\n' +
+  'the bundled self-test template. Host config can be optionally copied or\n' +
+  'symlinked into the new profile for users who already have a configured\n' +
+  'agent on the host.';
 
 import {
   cpSync,

@@ -1,13 +1,12 @@
 /**
- * `psbx logs` — surface cloud-init provisioning logs for the project
- * VM and its underlying profile cache VM.
- *
  * Provisioning failures most commonly originate in the cache (it runs all
  * the heavy install/setup steps), so cache logs are surfaced even when the
  * project VM does not exist. Stopped VMs are started transiently to fetch
- * their logs and then stopped again — Lima only exposes guest filesystem
- * access through `limactl shell`, which requires a running VM.
+ * their logs and then stopped again.
  */
+
+export const DESCRIPTION =
+  'Show cloud-init provisioning logs for the project VM and its profile cache VM';
 
 import { profileCacheInputs } from '../cache.ts';
 import { resolveProfile } from '../config.ts';

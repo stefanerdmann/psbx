@@ -4,15 +4,11 @@ import { join } from 'node:path';
 import { getProfilesDir, loadConfig } from '../config.ts';
 import { handleError } from './helpers.ts';
 
+export const DESCRIPTION = 'Open a profile in $EDITOR';
+
 interface EditProfileOptions {
   file?: string;
 }
-
-// ---------------------------------------------------------------------------
-// psbx profile edit [profile] [--file <file>]
-//
-// Opens the profile directory (or a specific file) in $EDITOR.
-// ---------------------------------------------------------------------------
 
 const KNOWN_FILES: Record<string, string> = {
   lima: 'lima.yaml',

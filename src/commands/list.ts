@@ -5,6 +5,8 @@ import { getRegistry, saveRegistry } from '../registry.ts';
 import type { RegistryEntry } from '../types.ts';
 import { handleError } from './helpers.ts';
 
+export const DESCRIPTION = 'List all psbx VMs';
+
 interface ListOptions {
   prune?: boolean;
 }
@@ -16,16 +18,6 @@ interface VmRow {
   dir: string;
   isCurrent: boolean;
 }
-
-// ---------------------------------------------------------------------------
-// psbx list
-//
-// Lists all psbx VMs with their current status and project directory.
-// Reads the VM registry to know which VMs belong to psbx (vs other
-// Lima VMs). Checks live status for each registered VM.
-//
-// --prune  Remove stale entries (VM gone AND project dir missing).
-// ---------------------------------------------------------------------------
 
 function isStale(vmName: string, entry: RegistryEntry): boolean {
   const vmExists = limaStatus(vmName) !== null;

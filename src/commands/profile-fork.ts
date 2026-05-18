@@ -1,13 +1,11 @@
 /**
- * `psbx profile fork <new-profile>` — snapshot the running project
- * VM's profile (plus exfiltrated guest config from each configMount) into
- * a brand-new profile, then rebase the current VM onto that profile.
- *
  * Because the rendered Lima YAML is byte-identical, the new profile
  * shares the existing content-addressed cache; no restart or recreate is
- * required and only the registry pointer is rewritten.  This is the
- * primary "snapshot my agent state" workflow.
+ * required and only the registry pointer is rewritten.
  */
+
+export const DESCRIPTION =
+  "Snapshot the current project VM's profile (plus exfiltrated guest config) into a new profile and rebase the VM onto it";
 
 import { cpSync, existsSync, mkdirSync, mkdtempSync, renameSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';

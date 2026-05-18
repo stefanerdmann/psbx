@@ -2,15 +2,11 @@ import { existsSync, readdirSync } from 'node:fs';
 import { getProfilesDir, loadConfig } from '../config.ts';
 import { handleError } from './helpers.ts';
 
+export const DESCRIPTION = 'List all profiles';
+
 interface ListProfilesOptions {
   plain?: boolean;
 }
-
-// ---------------------------------------------------------------------------
-// psbx profile list (alias: profile ls)
-//
-// Lists all profiles in ~/.psbx/profiles/
-// ---------------------------------------------------------------------------
 
 export async function listProfiles(options: ListProfilesOptions = {}): Promise<void> {
   try {
