@@ -1,5 +1,5 @@
 /**
- * Shared TypeScript interfaces for pi-sandbox configuration, registry
+ * Shared TypeScript interfaces for psbx configuration, registry
  * entries, profile metadata, and Lima primitives.
  *
  * This module is type-only: no runtime code lives here. The split keeps

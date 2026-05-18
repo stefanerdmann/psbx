@@ -16,7 +16,7 @@ describe('exfiltrateConfigMounts', { concurrency: false }, () => {
   let tmpDir: string;
 
   before(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'pi-exfiltrate-test-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'psbx-exfiltrate-test-'));
   });
 
   after(() => {

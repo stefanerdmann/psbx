@@ -1,5 +1,5 @@
 /**
- * `pi-sandbox logs` — surface cloud-init provisioning logs for the project
+ * `psbx logs` — surface cloud-init provisioning logs for the project
  * VM and its underlying profile cache VM.
  *
  * Provisioning failures most commonly originate in the cache (it runs all

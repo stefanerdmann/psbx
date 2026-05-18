@@ -1,6 +1,6 @@
 # Concepts: Profile Templates, Profiles, and Registry Metadata
 
-pi-sandbox uses a profile-centered configuration hierarchy that separates
+psbx uses a profile-centered configuration hierarchy that separates
 **shipped defaults**, **user customizations**, and **per-VM runtime metadata**.
 
 ## The three tiers
@@ -9,34 +9,34 @@ pi-sandbox uses a profile-centered configuration hierarchy that separates
 ┌─────────────────────────────────────────────────────┐
 │              Profile Template (shipped)              │
 │                                                     │
-│  Read-only blueprints bundled with pi-sandbox.      │
+│  Read-only blueprints bundled with psbx.      │
 │  Location: templates/profiles/<name>/               │
 │                                                     │
 │  Examples: pi-in-ubuntu, copilot-in-ubuntu,         │
 │            self-test                                 │
 └────────────────────┬────────────────────────────────┘
-                     │  pi-sandbox profile init <name>
+                     │  psbx profile init <name>
                      │  --template <template>
                      ▼
 ┌─────────────────────────────────────────────────────┐
 │                   Profile (user)                     │
 │                                                     │
-│  User-owned copies in ~/.pi-sandbox/profiles/.      │
-│  Editable with `pi-sandbox profile edit`.           │
+│  User-owned copies in ~/.psbx/profiles/.      │
+│  Editable with `psbx profile edit`.           │
 │  One profile can serve many projects/VMs.           │
 │                                                     │
 │  Contains: lima.yaml, env.yaml, config dirs         │
 │            (pi/agent, copilot, etc.)                │
 └────────────────────┬────────────────────────────────┘
-                     │  pi-sandbox up [--profile <name>]
+                     │  psbx up [--profile <name>]
                      │  (registry records profile + hashes)
                      ▼
 ┌─────────────────────────────────────────────────────┐
 │             Registry Metadata (per VM)               │
 │                                                     │
-│  Stored in ~/.pi-sandbox/config.json under          │
+│  Stored in ~/.psbx/config.json under          │
 │  vms.<vm-name>.                                     │
-│  (Override root with PI_SANDBOX_HOME)               │
+│  (Override root with PSBX_HOME)               │
 │                                                     │
 │  Ties a VM to a profile and records change hashes.  │
 │  The profile remains the source of truth.           │
@@ -49,7 +49,7 @@ pi-sandbox uses a profile-centered configuration hierarchy that separates
 
 A **profile template** is a read-only, shipped blueprint that provides
 sensible defaults for a particular agent or workflow. Profile templates
-live in the `templates/profiles/` directory of the pi-sandbox installation
+live in the `templates/profiles/` directory of the psbx installation
 and cannot be modified by the user.
 
 Shipped profile templates:
@@ -62,7 +62,7 @@ Shipped profile templates:
 
 ### Profile
 
-A **profile** is a user-owned directory under `~/.pi-sandbox/profiles/<name>/`.
+A **profile** is a user-owned directory under `~/.psbx/profiles/<name>/`.
 It is created from a profile template, copied from an existing profile, or
 forked from a running VM. A single profile can be the basis for VMs in many
 different projects.
@@ -91,7 +91,7 @@ contains three keys:
 | `shellEnvAllowlist` | string[] | Host environment variables forwarded into the VM shell |
 | `configMounts` | object[] | Profile config directories mounted into the VM |
 
-`pi-sandbox status` shows the env live through the VM's registered profile name.
+`psbx status` shows the env live through the VM's registered profile name.
 There is no per-VM env override stored in the registry. If the registered
 profile is missing, `status`, `up`, `up --only-recreate`, and
 `up --force-recreate` fail with guidance to restore the profile or fork from a
@@ -103,14 +103,14 @@ forwarding no host env vars.
 ```
 1. Initialize a profile from a shipped template
    ┌──────────────────────────────────────────┐
-   │ $ pi-sandbox profile init work           │
+   │ $ psbx profile init work           │
    │   --template pi-in-ubuntu                │
    └──────────────────────────────────────────┘
            │
            ▼
 2. Customize the profile (optional)
    ┌──────────────────────────────────────────┐
-   │ $ pi-sandbox profile edit work           │
+   │ $ psbx profile edit work           │
    │   # edit lima.yaml, env.yaml,            │
    │   # add auth tokens, tweak resources     │
    └──────────────────────────────────────────┘
@@ -119,23 +119,23 @@ forwarding no host env vars.
 3. Start a VM in a project directory
    ┌──────────────────────────────────────────┐
    │ $ cd ~/projects/my-app                   │
-   │ $ pi-sandbox up --profile work           │
+   │ $ psbx up --profile work           │
    │   # records profile name + hashes        │
    └──────────────────────────────────────────┘
            │
            ▼
 4. Work in the VM (enter, exec, restart...)
    ┌──────────────────────────────────────────┐
-   │ $ pi-sandbox up      # re-enter          │
-   │ $ pi-sandbox exec -- npm test            │
-   │ $ pi-sandbox restart                     │
+   │ $ psbx up      # re-enter          │
+   │ $ psbx exec -- npm test            │
+   │ $ psbx restart                     │
    └──────────────────────────────────────────┘
            │
            ▼
 5. Inspect or change profile env
    ┌──────────────────────────────────────────┐
-   │ $ pi-sandbox status                      │
-   │ $ pi-sandbox profile edit work --file env│
+   │ $ psbx status                      │
+   │ $ psbx profile edit work --file env│
    │   # exec/up read allowlist/defaultCmd    │
    │   # live from the profile                │
    └──────────────────────────────────────────┘
@@ -143,7 +143,7 @@ forwarding no host env vars.
            ▼
 6. Fork VM-local config into a new profile
    ┌──────────────────────────────────────────┐
-   │ $ pi-sandbox profile fork work-local     │
+   │ $ psbx profile fork work-local     │
    │   # requires this VM to be running;     │
    │   # no restart/recreate is performed     │
    └──────────────────────────────────────────┘
@@ -152,7 +152,7 @@ forwarding no host env vars.
 7. Reuse the same profile for another project
    ┌──────────────────────────────────────────┐
    │ $ cd ~/projects/other-app                │
-   │ $ pi-sandbox up --profile work           │
+   │ $ psbx up --profile work           │
    │   # creates a separate VM using the      │
    │   # same profile                         │
    └──────────────────────────────────────────┘
@@ -165,7 +165,7 @@ forwarding no host env vars.
   (shipped, read-only)            (user, source of truth)       (metadata only)
   ──────────────────              ───────────────────────       ───────────────
 
-  templates/profiles/             ~/.pi-sandbox/profiles/work/  config.json → vms.my-app
+  templates/profiles/             ~/.psbx/profiles/work/  config.json → vms.my-app
   └── pi-in-ubuntu/               ├── lima.yaml ──────────┐     ├── profile: work
       ├── lima.yaml     ──copy──▶ ├── env.yaml ───────┐   │     ├── limaConfigHash
       ├── env.yaml                ├── pi/             │   │     ├── finalizerHash

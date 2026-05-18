@@ -1,5 +1,5 @@
 /**
- * Persistent on-disk registries stored in `~/.pi-sandbox/config.json`.
+ * Persistent on-disk registries stored in `~/.psbx/config.json`.
  *
  * Two parallel maps live here:
  *   - `vms`     — per-project VM bindings (project dir, profile, drift

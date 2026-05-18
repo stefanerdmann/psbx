@@ -1,5 +1,5 @@
 /**
- * Thin wrapper around `limactl` for everything pi-sandbox needs:
+ * Thin wrapper around `limactl` for everything psbx needs:
  * start/clone/stop/delete/shell, cloud-init status probing, JSON listing,
  * version, and direct manipulation of the per-instance `lima.yaml` on disk.
  *
@@ -186,7 +186,7 @@ function limaCheckProvisioning(name: string): void {
     } catch {}
 
     throw new LimaError(
-      `Provisioning failed for sandbox '${name}'.${errorLines}\nRun 'pi-sandbox logs' to see what went wrong.`,
+      `Provisioning failed for sandbox '${name}'.${errorLines}\nRun 'psbx logs' to see what went wrong.`,
       { command: err.command, exitCode: err.exitCode, stderr: err.stderr },
     );
   }

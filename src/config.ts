@@ -2,10 +2,10 @@
  * Application and profile configuration.
  *
  * Owns:
- *   - Resolution of the pi-sandbox home directory (`~/.pi-sandbox` or
- *     `$PI_SANDBOX_HOME`) and the layout below it (`config.json`,
+ *   - Resolution of the psbx home directory (`~/.psbx` or
+ *     `$PSBX_HOME`) and the layout below it (`config.json`,
  *     `profiles/<name>/{lima,env}.yaml`).
- *   - Loading and validating profile `env.yaml` (the strict pi-sandbox
+ *   - Loading and validating profile `env.yaml` (the strict psbx
  *     schema for default cmd, allowlist, and config mounts).
  *   - Deriving a deterministic VM name from a project directory.
  *   - Reading and updating the user-level `defaultProfile` setting.
@@ -26,10 +26,10 @@ const DEFAULT_CONFIG: AppConfig = {
 };
 
 function getConfigDir(): string {
-  if (process.env.PI_SANDBOX_HOME) {
-    return resolve(expandHome(process.env.PI_SANDBOX_HOME));
+  if (process.env.PSBX_HOME) {
+    return resolve(expandHome(process.env.PSBX_HOME));
   }
-  return resolve(homedir(), '.pi-sandbox');
+  return resolve(homedir(), '.psbx');
 }
 
 function getConfigPath(): string {
@@ -218,7 +218,7 @@ function resolveProfile(config: AppConfig, profileNameOverride?: string | null):
   if (!name) {
     throw new Error(
       'No profile specified and no default profile configured.\n' +
-        'Use `--profile <name>` or set a default with `pi-sandbox profile set-default <name>`.',
+        'Use `--profile <name>` or set a default with `psbx profile set-default <name>`.',
     );
   }
   const dir = join(getProfilesDir(), name);
@@ -226,7 +226,7 @@ function resolveProfile(config: AppConfig, profileNameOverride?: string | null):
 
   if (!existsSync(dir)) {
     throw new Error(
-      `Profile "${name}" not found at ${dir}. Run \`pi-sandbox profile init ${name}\` first.`,
+      `Profile "${name}" not found at ${dir}. Run \`psbx profile init ${name}\` first.`,
     );
   }
 
@@ -286,7 +286,7 @@ function setDefaultProfile(profileName: string): AppConfig {
   const profileDir = join(getProfilesDir(), profileName);
   if (!existsSync(profileDir)) {
     throw new Error(
-      `Profile "${profileName}" not found at ${profileDir}. Run \`pi-sandbox profile init ${profileName}\` first.`,
+      `Profile "${profileName}" not found at ${profileDir}. Run \`psbx profile init ${profileName}\` first.`,
     );
   }
   config.defaultProfile = profileName;

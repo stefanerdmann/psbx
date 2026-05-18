@@ -13,7 +13,7 @@ import { resolveProfile } from '../../src/config.ts';
 import type { Profile } from '../../src/types.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const BIN = resolve(__dirname, '..', '..', 'bin', 'pi-sandbox.ts');
+const BIN = resolve(__dirname, '..', '..', 'bin', 'psbx.ts');
 
 type RunOptions = {
   HOME?: string;
@@ -114,8 +114,8 @@ describe('detectMismatches', { concurrency: true }, () => {
   });
 
   it('reports Lima config hash mismatch with a real profile', () => {
-    const home = mkdtempSync(join(tmpdir(), 'pi-hash-home-'));
-    const proj = mkdtempSync(join(tmpdir(), 'pi-hash-proj-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-hash-home-'));
+    const proj = mkdtempSync(join(tmpdir(), 'psbx-hash-proj-'));
     const origHome = process.env.HOME;
     try {
       run(['profile', 'init', 'self-test', '--self-test'], { HOME: home, cwd: proj });
@@ -222,7 +222,7 @@ describe('detectMismatches', { concurrency: true }, () => {
   });
 
   it('does NOT flag profile config content drift as a recreate-worthy mismatch', () => {
-    const profileDir = mkdtempSync(join(tmpdir(), 'pi-finalizer-drift-'));
+    const profileDir = mkdtempSync(join(tmpdir(), 'psbx-finalizer-drift-'));
     try {
       mkdirSync(join(profileDir, 'pi', 'agent'), { recursive: true });
       const settingsPath = join(profileDir, 'pi', 'agent', 'settings.json');
@@ -265,8 +265,8 @@ describe('detectMismatches', { concurrency: true }, () => {
 
 describe('cache invalidation helpers', { concurrency: true }, () => {
   it('hashLimaConfig changes when provision file contents change', () => {
-    const profileDir = mkdtempSync(join(tmpdir(), 'pi-hash-script-profile-'));
-    const projectDir = mkdtempSync(join(tmpdir(), 'pi-hash-script-project-'));
+    const profileDir = mkdtempSync(join(tmpdir(), 'psbx-hash-script-profile-'));
+    const projectDir = mkdtempSync(join(tmpdir(), 'psbx-hash-script-project-'));
     try {
       const provisionPath = join(profileDir, 'provision-system.sh');
       writeFileSync(
@@ -299,7 +299,7 @@ describe('cache invalidation helpers', { concurrency: true }, () => {
   });
 
   it('hashFinalizerConfig changes when profile config mount contents change', () => {
-    const profileDir = mkdtempSync(join(tmpdir(), 'pi-finalizer-profile-'));
+    const profileDir = mkdtempSync(join(tmpdir(), 'psbx-finalizer-profile-'));
     try {
       mkdirSync(join(profileDir, 'pi', 'agent'), { recursive: true });
       const settingsPath = join(profileDir, 'pi', 'agent', 'settings.json');
@@ -324,7 +324,7 @@ describe('cache invalidation helpers', { concurrency: true }, () => {
   });
 
   it('hashFinalizerConfig changes when profile config mount file mode changes', () => {
-    const profileDir = mkdtempSync(join(tmpdir(), 'pi-finalizer-profile-'));
+    const profileDir = mkdtempSync(join(tmpdir(), 'psbx-finalizer-profile-'));
     try {
       mkdirSync(join(profileDir, 'pi', 'agent'), { recursive: true });
       const settingsPath = join(profileDir, 'pi', 'agent', 'settings.json');
@@ -350,7 +350,7 @@ describe('cache invalidation helpers', { concurrency: true }, () => {
   });
 
   it('hashFinalizerConfig changes when profile config symlink target changes', () => {
-    const profileDir = mkdtempSync(join(tmpdir(), 'pi-finalizer-profile-'));
+    const profileDir = mkdtempSync(join(tmpdir(), 'psbx-finalizer-profile-'));
     try {
       mkdirSync(join(profileDir, 'pi', 'agent'), { recursive: true });
       const configDir = join(profileDir, 'pi', 'agent');

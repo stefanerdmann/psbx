@@ -2,5 +2,5 @@
 node_modules/
 legacy/
 .agents/
-.pi-sandbox/.DS_Store
+.psbx/.DS_Store
 dist/

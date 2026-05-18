@@ -1,5 +1,5 @@
 /**
- * `pi-sandbox profile init` — create a new profile from a shipped template,
+ * `psbx profile init` — create a new profile from a shipped template,
  * an existing profile, or the bundled self-test template.
  *
  * The profile is staged to a hidden sibling directory and atomically
@@ -183,7 +183,7 @@ function sourceDirForOptions(options: InitOptions): string {
 async function init(profileName: string | undefined, options: InitOptions = {}): Promise<void> {
   try {
     if (!profileName) {
-      throw new Error('Profile name is required. Usage: pi-sandbox profile init <profile>');
+      throw new Error('Profile name is required. Usage: psbx profile init <profile>');
     }
 
     if (options.copyFromHost && options.symlinkFromHost) {

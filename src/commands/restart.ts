@@ -6,9 +6,9 @@ interface RestartOptions {
 }
 
 // ---------------------------------------------------------------------------
-// pi-sandbox restart
+// psbx restart
 //
-// Alias for `pi-sandbox stop && pi-sandbox up --only-start`.
+// Alias for `psbx stop && psbx up --only-start`.
 // ---------------------------------------------------------------------------
 
 export async function restart(options: RestartOptions = {}): Promise<void> {

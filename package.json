@@ -1,10 +1,10 @@
 {
-  "name": "pi-sandbox",
+  "name": "psbx",
   "version": "0.2.0",
   "description": "CLI tool for managing per-project Lima VMs that sandbox the pi coding agent",
   "type": "module",
   "bin": {
-    "pi-sandbox": "./dist/bin/pi-sandbox.js"
+    "psbx": "./dist/bin/psbx.js"
   },
   "files": [
     "dist/bin/",

@@ -7,7 +7,7 @@ configuration hierarchy (profile template → profile → per-VM registry metada
 
 | Module | Responsibility |
 |---|---|
-| `bin/pi-sandbox.js` | Defines CLI commands and the limited profile-aware command surface. |
+| `bin/psbx.js` | Defines CLI commands and the limited profile-aware command surface. |
 | `src/config.js` | Loads global config, resolves profile directories, parses `env.yaml`, and derives VM names. |
 | `src/template.js` | Parses profile and project Lima YAML, deep-merges safe overrides, resolves provisioning file paths, adds dynamic mounts (project workdir + each profile config subfolder), and serializes the final Lima config. |
 | `src/cache.js` | Builds/reuses hidden clone source VMs for effective profile cache keys and creates project VMs with `limactl clone`. |
@@ -19,20 +19,20 @@ configuration hierarchy (profile template → profile → per-VM registry metada
 
 ## Profile source of truth
 
-Profiles are directories under `~/.pi-sandbox/profiles`. The directory name is the profile name. The profile owns:
+Profiles are directories under `~/.psbx/profiles`. The directory name is the profile name. The profile owns:
 
 1. Lima configuration in `lima.yaml`
 2. Environment passthrough and config-mount declarations in `env.yaml`
 3. Host-config subfolders referenced by `env.yaml#configMounts` (e.g., `pi/agent`, `copilot`)
 
-`config.json` stores the default profile plus per-VM and cache metadata; profile files remain the source of truth for Lima and env settings. The pi-sandbox state directory defaults to `~/.pi-sandbox` and can be overridden with the `PI_SANDBOX_HOME` environment variable.
+`config.json` stores the default profile plus per-VM and cache metadata; profile files remain the source of truth for Lima and env settings. The psbx state directory defaults to `~/.psbx` and can be overridden with the `PSBX_HOME` environment variable.
 
 ## YAML generation
 
-pi-sandbox does not interpolate YAML text. For project VMs it:
+psbx does not interpolate YAML text. For project VMs it:
 
 1. Parses the profile `lima.yaml`.
-2. Parses `<project>/.pi-sandbox/lima.yaml` if it exists.
+2. Parses `<project>/.psbx/lima.yaml` if it exists.
 3. Rejects project YAML keys except `cpus`, `memory`, and `disk`.
 4. Deep-merges the project YAML over the profile YAML.
 5. Resolves relative `provision[].file` paths against the profile directory.
@@ -40,9 +40,9 @@ pi-sandbox does not interpolate YAML text. For project VMs it:
 7. Adds one read-only mount per `env.yaml#configMounts` entry that exists on disk: `<profileDir>/<source>` → `/mnt/host-config/<name>`.
 8. Serializes the object to a temporary `lima.yaml` in a private temp directory.
 
-Extra arguments passed to `pi-sandbox up -- ...` are forwarded to `limactl start` after pi-sandbox has generated the YAML, so Lima handles their precedence.
+Extra arguments passed to `psbx up -- ...` are forwarded to `limactl start` after psbx has generated the YAML, so Lima handles their precedence.
 
-For profile cache VMs, pi-sandbox performs steps 1-5 and serializes the result
+For profile cache VMs, psbx performs steps 1-5 and serializes the result
 without adding project/config dynamic mounts. This keeps project paths and
 profile config directory contents out of the reusable cache.
 
@@ -53,7 +53,7 @@ Normal VM creation is clone-backed:
 1. Compute a profile cache key from cache-safe inputs: effective profile Lima
    config, project `cpus`/`memory`/`disk` overrides, provision file contents,
    Lima version, and CA certificate file contents.
-2. Ensure a stopped hidden cache VM named `pi-cache-<cacheKey[0..12]>` exists.
+2. Ensure a stopped hidden cache VM named `psbx-cache-<cacheKey[0..12]>` exists.
 3. `limactl clone` the cache VM to the project VM name.
 4. Merge `~/workdir` and `/mnt/host-config/<name>` mounts into the clone's
    already-expanded instance `lima.yaml`.
@@ -68,7 +68,7 @@ profile config edits re-run finalization in place without rebuilding the
 expensive base or restarting the VM.
 
 When opaque extra `limactl` creation arguments are supplied after `--`,
-pi-sandbox bypasses the cache and creates directly because those arguments may
+psbx bypasses the cache and creates directly because those arguments may
 affect creation-time state that cannot be safely reconstructed after cloning.
 
 ## Mount strategy
@@ -100,14 +100,14 @@ deterministic and prevents accidental forwarding of the host environment.
 
 ## Registry
 
-The registry lives in `~/.pi-sandbox/config.json` under the top-level `vms` key. Each entry stores the host project directory, registered profile name, cache metadata, and split hashes used for drift detection:
+The registry lives in `~/.psbx/config.json` under the top-level `vms` key. Each entry stores the host project directory, registered profile name, cache metadata, and split hashes used for drift detection:
 
 ```json
 {
   "my-project": {
     "projectDir": "/Users/me/projects/my-project",
     "profile": "default",
-    "profileCacheName": "pi-cache-1a2b3c4d5e6f7",
+    "profileCacheName": "psbx-cache-1a2b3c4d5e6f7",
     "profileCacheKey": "1a2b3c4d5e6f...",
     "finalizerStatus": "complete",
     "limaConfigHash": "<sha256 of rendered project lima.yaml>",
@@ -126,7 +126,7 @@ stores the cache key, Lima version, creation timestamp, and a `status` of
 identical rendered cache Lima YAML share a cache. Cache GC removes any cache
 not referenced by a live registry VM. When cache provisioning fails, the
 failed cache VM is kept (registered with `status: 'failed'`) so its cloud-init
-log can be inspected via `pi-sandbox logs`; the next `pi-sandbox up` deletes
-and rebuilds it. `pi-sandbox cache status` computes the current project's
+log can be inspected via `psbx logs`; the next `psbx up` deletes
+and rebuilds it. `psbx cache status` computes the current project's
 cache key using the registered project profile when available, otherwise the
 default profile.

@@ -1,5 +1,5 @@
 /**
- * `pi-sandbox status [--json]` — show the current project VM's status,
+ * `psbx status [--json]` — show the current project VM's status,
  * profile-derived environment, and drift between the registry-stored
  * hashes and the current profile state.
  *
@@ -59,14 +59,14 @@ function tryLoadEnv(registryEntry: RegistryEntry | null): EnvConfig | null {
 }
 
 /**
- * Returns the `pi-sandbox up` command hint, including `--profile <name>` when
+ * Returns the `psbx up` command hint, including `--profile <name>` when
  * the VM's profile is not the currently configured default.
  */
 function upHint(profileName: string | null | undefined, defaultProfile: string | null): string {
   if (profileName && profileName !== defaultProfile) {
-    return `\`pi-sandbox up --profile ${profileName}\``;
+    return `\`psbx up --profile ${profileName}\``;
   }
-  return '`pi-sandbox up`';
+  return '`psbx up`';
 }
 
 /**
@@ -146,7 +146,7 @@ function computeSyncDrift(
         drift.push({
           field: 'shellEnvAllowlist',
           message: 'Shell env allowlist has changed',
-          guidance: `picked up on next \`pi-sandbox exec\` or ${upHint(registryEntry.profile, defaultProfile)}`,
+          guidance: `picked up on next \`psbx exec\` or ${upHint(registryEntry.profile, defaultProfile)}`,
         });
       }
     } catch {
@@ -162,7 +162,7 @@ function computeSyncDrift(
         drift.push({
           field: 'defaultCmd',
           message: 'Default command has changed',
-          guidance: `picked up on next \`pi-sandbox exec\` or ${upHint(registryEntry.profile, defaultProfile)}`,
+          guidance: `picked up on next \`psbx exec\` or ${upHint(registryEntry.profile, defaultProfile)}`,
         });
       }
     } catch {

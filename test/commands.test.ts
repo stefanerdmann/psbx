@@ -27,7 +27,7 @@ import type {
 } from '../src/types.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const BIN = resolve(__dirname, '..', 'bin', 'pi-sandbox.ts');
+const BIN = resolve(__dirname, '..', 'bin', 'psbx.ts');
 
 type RunOptions = {
   HOME?: string;
@@ -56,8 +56,8 @@ describe('commands', { concurrency: false }, () => {
   let projectDir: string;
 
   before(() => {
-    tmpHome = mkdtempSync(join(tmpdir(), 'pi-smoke-home-'));
-    projectDir = mkdtempSync(join(tmpdir(), 'pi-smoke-proj-'));
+    tmpHome = mkdtempSync(join(tmpdir(), 'psbx-smoke-home-'));
+    projectDir = mkdtempSync(join(tmpdir(), 'psbx-smoke-proj-'));
     // Initialise a self-test profile so commands can resolve config + profile
     run(['profile', 'init', 'self-test', '--self-test'], { HOME: tmpHome, cwd: projectDir });
   });
@@ -94,7 +94,7 @@ describe('commands', { concurrency: false }, () => {
   });
 
   it('[cmd] profile init --self-test creates a new profile', () => {
-    const freshHome = mkdtempSync(join(tmpdir(), 'pi-smoke-init-'));
+    const freshHome = mkdtempSync(join(tmpdir(), 'psbx-smoke-init-'));
     try {
       const r = run(['profile', 'init', 'myprofile', '--self-test'], {
         HOME: freshHome,
@@ -117,14 +117,14 @@ describe('commands', { concurrency: false }, () => {
   });
 
   it('[cmd] profile init --template copilot-in-ubuntu creates a copilot-only profile', () => {
-    const home = mkdtempSync(join(tmpdir(), 'pi-copilot-home-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-copilot-home-'));
     try {
       const r = run(['profile', 'init', 'co', '--template', 'copilot-in-ubuntu'], {
         HOME: home,
         cwd: projectDir,
       });
       assert.strictEqual(r.status, 0, `stderr: ${r.stderr}`);
-      const profileDir = join(home, '.pi-sandbox', 'profiles', 'co');
+      const profileDir = join(home, '.psbx', 'profiles', 'co');
       const env = loadEnv(profileDir);
       const names = env.configMounts.map((m) => m.name).sort();
       assert.deepStrictEqual(names, ['copilot']);
@@ -141,7 +141,7 @@ describe('commands', { concurrency: false }, () => {
   });
 
   it('[cmd] profile init --template rejects unknown templates', () => {
-    const home = mkdtempSync(join(tmpdir(), 'pi-tpl-home-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-tpl-home-'));
     try {
       const r = run(['profile', 'init', 'x', '--template', 'does-not-exist'], {
         HOME: home,
@@ -155,21 +155,21 @@ describe('commands', { concurrency: false }, () => {
   });
 
   it('[cmd] profile delete removes a profile', () => {
-    const home = mkdtempSync(join(tmpdir(), 'pi-delprof-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-delprof-'));
     try {
       run(['profile', 'init', 'foo', '--self-test'], { HOME: home, cwd: projectDir });
-      assert.ok(existsSync(join(home, '.pi-sandbox', 'profiles', 'foo')));
+      assert.ok(existsSync(join(home, '.psbx', 'profiles', 'foo')));
       const r = run(['profile', 'delete', 'foo', '-f'], { HOME: home, cwd: projectDir });
       assert.strictEqual(r.status, 0, `stderr: ${r.stderr}`);
       assert.ok(r.stdout.includes('Deleted profile'), `stdout: ${r.stdout}`);
-      assert.ok(!existsSync(join(home, '.pi-sandbox', 'profiles', 'foo')));
+      assert.ok(!existsSync(join(home, '.psbx', 'profiles', 'foo')));
     } finally {
       rmSync(home, { recursive: true, force: true });
     }
   });
 
   it('[cmd] profile delete --all removes all profiles', () => {
-    const home = mkdtempSync(join(tmpdir(), 'pi-delall-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-delall-'));
     try {
       run(['profile', 'init', 'a', '--self-test'], { HOME: home, cwd: projectDir });
       run(['profile', 'init', 'b', '--self-test'], { HOME: home, cwd: projectDir });
@@ -182,7 +182,7 @@ describe('commands', { concurrency: false }, () => {
   });
 
   it('[cmd] profile delete fails for nonexistent profile', () => {
-    const home = mkdtempSync(join(tmpdir(), 'pi-delnone-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-delnone-'));
     try {
       run(['profile', 'init', 'x', '--self-test'], { HOME: home, cwd: projectDir });
       const r = run(['profile', 'delete', 'nope', '-f'], { HOME: home, cwd: projectDir });
@@ -212,7 +212,7 @@ describe('commands', { concurrency: false }, () => {
   });
 
   it('[cmd] profile set-default marks a profile as default', () => {
-    const home = mkdtempSync(join(tmpdir(), 'pi-set-default-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-set-default-'));
     try {
       run(['profile', 'init', 'a', '--self-test'], { HOME: home, cwd: projectDir });
       run(['profile', 'init', 'b', '--self-test'], { HOME: home, cwd: projectDir });
@@ -230,8 +230,8 @@ describe('commands', { concurrency: false }, () => {
   });
 
   it('[cmd] cache commands list, report, and delete the current project hit', () => {
-    const home = mkdtempSync(join(tmpdir(), 'pi-cache-cmd-home-'));
-    const project = mkdtempSync(join(tmpdir(), 'pi-cache-cmd-project-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-cache-cmd-home-'));
+    const project = mkdtempSync(join(tmpdir(), 'psbx-cache-cmd-project-'));
     try {
       const initResult = run(['profile', 'init', 'self-test', '--self-test'], {
         HOME: home,
@@ -239,7 +239,7 @@ describe('commands', { concurrency: false }, () => {
       });
       assert.strictEqual(initResult.status, 0, `stderr: ${initResult.stderr}`);
 
-      const profileDir = join(home, '.pi-sandbox', 'profiles', 'self-test');
+      const profileDir = join(home, '.psbx', 'profiles', 'self-test');
       const profile = {
         name: 'self-test',
         dir: profileDir,
@@ -312,8 +312,8 @@ describe('commands', { concurrency: false }, () => {
   });
 
   it('[cmd] cache delete --all removes all registered caches', () => {
-    const home = mkdtempSync(join(tmpdir(), 'pi-cache-delall-home-'));
-    const project = mkdtempSync(join(tmpdir(), 'pi-cache-delall-project-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-cache-delall-home-'));
+    const project = mkdtempSync(join(tmpdir(), 'psbx-cache-delall-project-'));
     try {
       const initResult = run(['profile', 'init', 'self-test', '--self-test'], {
         HOME: home,
@@ -322,12 +322,12 @@ describe('commands', { concurrency: false }, () => {
       assert.strictEqual(initResult.status, 0, `stderr: ${initResult.stderr}`);
 
       writeCacheRegistry(home, {
-        'pi-cache-self-test-a': {
+        'psbx-cache-self-test-a': {
           profile: 'self-test',
           cacheKey: 'a'.repeat(64),
           createdAt: '2026-05-12T00:00:00.000Z',
         },
-        'pi-cache-self-test-b': {
+        'psbx-cache-self-test-b': {
           profile: 'self-test',
           cacheKey: 'b'.repeat(64),
           createdAt: '2026-05-12T00:00:00.000Z',
@@ -335,13 +335,13 @@ describe('commands', { concurrency: false }, () => {
       });
 
       const fake = writeFakeLimactl({
-        'pi-cache-self-test-a': {
-          name: 'pi-cache-self-test-a',
+        'psbx-cache-self-test-a': {
+          name: 'psbx-cache-self-test-a',
           status: 'Stopped',
           config: { disk: '8GiB' },
         },
-        'pi-cache-self-test-b': {
-          name: 'pi-cache-self-test-b',
+        'psbx-cache-self-test-b': {
+          name: 'psbx-cache-self-test-b',
           status: 'Running',
           config: { disk: '16GiB' },
         },
@@ -362,7 +362,7 @@ describe('commands', { concurrency: false }, () => {
         `stdout: ${deleteResult.stdout}`,
       );
 
-      const config = JSON.parse(readFileSync(join(home, '.pi-sandbox', 'config.json'), 'utf-8'));
+      const config = JSON.parse(readFileSync(join(home, '.psbx', 'config.json'), 'utf-8'));
       assert.strictEqual(config.caches, undefined);
     } finally {
       rmSync(home, { recursive: true, force: true });
@@ -371,8 +371,8 @@ describe('commands', { concurrency: false }, () => {
   });
 
   it('[cmd] cache status uses the current project registry profile before default', () => {
-    const home = mkdtempSync(join(tmpdir(), 'pi-cache-registry-profile-home-'));
-    const project = mkdtempSync(join(tmpdir(), 'pi-cache-registry-profile-project-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-cache-registry-profile-home-'));
+    const project = mkdtempSync(join(tmpdir(), 'psbx-cache-registry-profile-project-'));
     try {
       const initDefault = run(['profile', 'init', 'default-profile', '--self-test'], {
         HOME: home,
@@ -390,7 +390,7 @@ describe('commands', { concurrency: false }, () => {
 
       writeRegistry(home, project, { profile: 'project-profile' });
 
-      const profileDir = join(home, '.pi-sandbox', 'profiles', 'project-profile');
+      const profileDir = join(home, '.psbx', 'profiles', 'project-profile');
       const profile = {
         name: 'project-profile',
         dir: profileDir,
@@ -445,8 +445,8 @@ describe('commands', { concurrency: false }, () => {
   });
 
   it('[cmd] profile cache names stay short for long profile names', () => {
-    const home = mkdtempSync(join(tmpdir(), 'pi-cache-short-name-home-'));
-    const project = mkdtempSync(join(tmpdir(), 'pi-cache-short-name-project-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-cache-short-name-home-'));
+    const project = mkdtempSync(join(tmpdir(), 'psbx-cache-short-name-project-'));
     const profileName = 'copied-from-vm-with-a-very-long-name';
     try {
       const initResult = run(['profile', 'init', profileName, '--self-test'], {
@@ -455,7 +455,7 @@ describe('commands', { concurrency: false }, () => {
       });
       assert.strictEqual(initResult.status, 0, `stderr: ${initResult.stderr}`);
 
-      const profileDir = join(home, '.pi-sandbox', 'profiles', profileName);
+      const profileDir = join(home, '.psbx', 'profiles', profileName);
       const profile = {
         name: profileName,
         dir: profileDir,
@@ -480,7 +480,7 @@ describe('commands', { concurrency: false }, () => {
       }
 
       assert.ok(cacheName.length <= 31, `cache name too long: ${cacheName}`);
-      assert.match(cacheName, /^pi-cache-[a-f0-9]{12}$/);
+      assert.match(cacheName, /^psbx-cache-[a-f0-9]{12}$/);
     } finally {
       rmSync(home, { recursive: true, force: true });
       rmSync(project, { recursive: true, force: true });
@@ -494,8 +494,8 @@ describe('commands', { concurrency: false }, () => {
   });
 
   it('[cmd] status text output handles Lima string resource sizes', () => {
-    const home = mkdtempSync(join(tmpdir(), 'pi-status-size-home-'));
-    const project = mkdtempSync(join(tmpdir(), 'pi-status-size-project-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-status-size-home-'));
+    const project = mkdtempSync(join(tmpdir(), 'psbx-status-size-project-'));
     try {
       const initResult = run(['profile', 'init', 'self-test', '--self-test'], {
         HOME: home,
@@ -605,8 +605,8 @@ describe('commands', { concurrency: false }, () => {
   });
 
   it('[cmd] up --only-create exits 1 when .agents is a symlink', () => {
-    const symlinkProj = mkdtempSync(join(tmpdir(), 'pi-symlink-proj-'));
-    const symlinkTarget = mkdtempSync(join(tmpdir(), 'pi-symlink-target-'));
+    const symlinkProj = mkdtempSync(join(tmpdir(), 'psbx-symlink-proj-'));
+    const symlinkTarget = mkdtempSync(join(tmpdir(), 'psbx-symlink-target-'));
     try {
       symlinkSync(symlinkTarget, join(symlinkProj, '.agents'));
       const r = run(['up', '--only-create', '--profile', 'self-test'], {
@@ -639,7 +639,7 @@ describe('commands', { concurrency: false }, () => {
       ...rest,
     };
     const registry: Record<string, RegistryEntry> = { [vmName]: entry };
-    const configPath = join(home, '.pi-sandbox', 'config.json');
+    const configPath = join(home, '.psbx', 'config.json');
     let existing: ConfigFileData = {};
     try {
       existing = JSON.parse(readFileSync(configPath, 'utf-8'));
@@ -651,7 +651,7 @@ describe('commands', { concurrency: false }, () => {
   }
 
   function writeCacheRegistry(home: string, caches: Record<string, CacheEntry>) {
-    const configPath = join(home, '.pi-sandbox', 'config.json');
+    const configPath = join(home, '.psbx', 'config.json');
     let existing: ConfigFileData = {};
     try {
       existing = JSON.parse(readFileSync(configPath, 'utf-8'));
@@ -663,7 +663,7 @@ describe('commands', { concurrency: false }, () => {
   }
 
   function writeFakeLimactl(instances: Record<string, LimaInstance>) {
-    const binDir = mkdtempSync(join(tmpdir(), 'pi-fake-limactl-bin-'));
+    const binDir = mkdtempSync(join(tmpdir(), 'psbx-fake-limactl-bin-'));
     const statePath = join(binDir, 'state.json');
     writeFileSync(statePath, JSON.stringify({ instances }, null, 2), 'utf-8');
     const scriptPath = join(binDir, 'limactl');
@@ -733,8 +733,8 @@ process.exit(1);
   }
 
   it('[cmd] status includes environment info from profile env.yaml', () => {
-    const projDir = mkdtempSync(join(tmpdir(), 'pi-status-env-'));
-    const home = mkdtempSync(join(tmpdir(), 'pi-status-env-home-'));
+    const projDir = mkdtempSync(join(tmpdir(), 'psbx-status-env-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-status-env-home-'));
     try {
       run(['profile', 'init', 'self-test', '--self-test'], { HOME: home, cwd: projDir });
 
@@ -767,8 +767,8 @@ process.exit(1);
   });
 
   it('[cmd] status shows "In sync" when hashes match', () => {
-    const projDir = mkdtempSync(join(tmpdir(), 'pi-status-sync-'));
-    const home = mkdtempSync(join(tmpdir(), 'pi-status-sync-home-'));
+    const projDir = mkdtempSync(join(tmpdir(), 'psbx-status-sync-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-status-sync-home-'));
     try {
       run(['profile', 'init', 'self-test', '--self-test'], { HOME: home, cwd: projDir });
 
@@ -809,8 +809,8 @@ process.exit(1);
   });
 
   it('[cmd] status shows "Out of sync" when hashes mismatch', () => {
-    const projDir = mkdtempSync(join(tmpdir(), 'pi-status-drift-'));
-    const home = mkdtempSync(join(tmpdir(), 'pi-status-drift-home-'));
+    const projDir = mkdtempSync(join(tmpdir(), 'psbx-status-drift-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-status-drift-home-'));
     try {
       run(['profile', 'init', 'self-test', '--self-test'], { HOME: home, cwd: projDir });
 
@@ -837,8 +837,8 @@ process.exit(1);
         `stdout: ${r.stdout}`,
       );
       assert.ok(r.stdout.includes('Default command has changed'), `stdout: ${r.stdout}`);
-      assert.ok(r.stdout.includes('pi-sandbox up'), `stdout: ${r.stdout}`);
-      assert.ok(r.stdout.includes('pi-sandbox exec'), `stdout: ${r.stdout}`);
+      assert.ok(r.stdout.includes('psbx up'), `stdout: ${r.stdout}`);
+      assert.ok(r.stdout.includes('psbx exec'), `stdout: ${r.stdout}`);
       assert.ok(
         !r.stdout.includes('--profile'),
         `hint must not include --profile when VM uses the default profile; stdout: ${r.stdout}`,
@@ -850,8 +850,8 @@ process.exit(1);
   });
 
   it('[cmd] status drift hints include --profile when VM uses a non-default profile', () => {
-    const projDir = mkdtempSync(join(tmpdir(), 'pi-status-drift-prof-'));
-    const home = mkdtempSync(join(tmpdir(), 'pi-status-drift-prof-home-'));
+    const projDir = mkdtempSync(join(tmpdir(), 'psbx-status-drift-prof-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-status-drift-prof-home-'));
     try {
       // Init two profiles: default is 'base', VM uses 'custom'
       run(['profile', 'init', 'base', '--self-test'], { HOME: home, cwd: projDir });
@@ -881,10 +881,10 @@ process.exit(1);
         r.stdout.includes('--profile custom'),
         `hint must include --profile custom; stdout: ${r.stdout}`,
       );
-      // Must not suggest the bare pi-sandbox up (without --profile)
+      // Must not suggest the bare psbx up (without --profile)
       assert.ok(
-        !r.stdout.includes('`pi-sandbox up`'),
-        `bare pi-sandbox up hint must not appear; stdout: ${r.stdout}`,
+        !r.stdout.includes('`psbx up`'),
+        `bare psbx up hint must not appear; stdout: ${r.stdout}`,
       );
     } finally {
       rmSync(projDir, { recursive: true, force: true });
@@ -893,8 +893,8 @@ process.exit(1);
   });
 
   it('[cmd] up uses detailed reason format when registry entry exists but VM does not', () => {
-    const projDir = mkdtempSync(join(tmpdir(), 'pi-reason-fmt-'));
-    const home = mkdtempSync(join(tmpdir(), 'pi-reason-home-'));
+    const projDir = mkdtempSync(join(tmpdir(), 'psbx-reason-fmt-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-reason-home-'));
     try {
       run(['profile', 'init', 'self-test', '--self-test'], { HOME: home, cwd: projDir });
       writeRegistry(home, projDir, { profile: 'self-test' });
@@ -918,21 +918,21 @@ process.exit(1);
   it('[cmd] completion bash outputs a valid completion script', () => {
     const r = run(['completion', 'bash']);
     assert.strictEqual(r.status, 0, `stderr: ${r.stderr}`);
-    assert.ok(r.stdout.includes('_pi_sandbox'), `stdout: ${r.stdout}`);
+    assert.ok(r.stdout.includes('_psbx'), `stdout: ${r.stdout}`);
     assert.ok(r.stdout.includes('complete -F'), `stdout: ${r.stdout}`);
   });
 
   it('[cmd] completion zsh outputs a valid completion script', () => {
     const r = run(['completion', 'zsh']);
     assert.strictEqual(r.status, 0, `stderr: ${r.stderr}`);
-    assert.ok(r.stdout.includes('#compdef pi-sandbox'), `stdout: ${r.stdout}`);
-    assert.ok(r.stdout.includes('compdef _pi_sandbox'), `stdout: ${r.stdout}`);
+    assert.ok(r.stdout.includes('#compdef psbx'), `stdout: ${r.stdout}`);
+    assert.ok(r.stdout.includes('compdef _psbx'), `stdout: ${r.stdout}`);
   });
 
   it('[cmd] completion fish outputs a valid completion script', () => {
     const r = run(['completion', 'fish']);
     assert.strictEqual(r.status, 0, `stderr: ${r.stderr}`);
-    assert.ok(r.stdout.includes('complete -c pi-sandbox'), `stdout: ${r.stdout}`);
+    assert.ok(r.stdout.includes('complete -c psbx'), `stdout: ${r.stdout}`);
   });
 
   it('[cmd] completion with unsupported shell exits 1', () => {
@@ -944,7 +944,7 @@ process.exit(1);
   // --- profile init additional options ---
 
   it('[cmd] profile init --from-profile copies an existing profile', () => {
-    const home = mkdtempSync(join(tmpdir(), 'pi-from-prof-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-from-prof-'));
     try {
       run(['profile', 'init', 'source', '--self-test'], { HOME: home, cwd: projectDir });
       const r = run(['profile', 'init', 'copy', '--from-profile', 'source'], {
@@ -953,14 +953,14 @@ process.exit(1);
       });
       assert.strictEqual(r.status, 0, `stderr: ${r.stderr}`);
       assert.ok(r.stdout.includes('Created profile'), `stdout: ${r.stdout}`);
-      assert.ok(existsSync(join(home, '.pi-sandbox', 'profiles', 'copy')));
+      assert.ok(existsSync(join(home, '.psbx', 'profiles', 'copy')));
     } finally {
       rmSync(home, { recursive: true, force: true });
     }
   });
 
   it('[cmd] profile init --set-as-default sets the new profile as default', () => {
-    const home = mkdtempSync(join(tmpdir(), 'pi-set-default-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-set-default-'));
     try {
       run(['profile', 'init', 'first', '--self-test'], { HOME: home, cwd: projectDir });
       const r = run(['profile', 'init', 'second', '--self-test', '--set-as-default'], {
@@ -987,13 +987,13 @@ process.exit(1);
   // --- list --prune ---
 
   it('[cmd] list --prune removes stale entries', () => {
-    const home = mkdtempSync(join(tmpdir(), 'pi-prune-'));
-    const project = mkdtempSync(join(tmpdir(), 'pi-prune-proj-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-prune-'));
+    const project = mkdtempSync(join(tmpdir(), 'psbx-prune-proj-'));
     try {
       run(['profile', 'init', 'self-test', '--self-test'], { HOME: home, cwd: project });
       // Write a registry entry pointing to a non-existent project dir + non-existent VM
-      const staleProjectDir = join(tmpdir(), `pi-nonexistent-${Date.now()}`);
-      const configPath = join(home, '.pi-sandbox', 'config.json');
+      const staleProjectDir = join(tmpdir(), `psbx-nonexistent-${Date.now()}`);
+      const configPath = join(home, '.psbx', 'config.json');
       let existing: ConfigFileData = {};
       try {
         existing = JSON.parse(readFileSync(configPath, 'utf-8'));
@@ -1023,8 +1023,8 @@ process.exit(1);
   // --- delete --all-registered ---
 
   it('[cmd] delete --all-registered deletes all registered VMs', () => {
-    const home = mkdtempSync(join(tmpdir(), 'pi-delall-vm-'));
-    const project = mkdtempSync(join(tmpdir(), 'pi-delall-vm-proj-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-delall-vm-'));
+    const project = mkdtempSync(join(tmpdir(), 'psbx-delall-vm-proj-'));
     try {
       run(['profile', 'init', 'self-test', '--self-test'], { HOME: home, cwd: project });
       const vmName = vmNameFrom(project);

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * `pi-sandbox` CLI entry point. Wires every command in `src/commands/` into
+ * `psbx` CLI entry point. Wires every command in `src/commands/` into
  * a `commander` program, handles the global `-y, --yes` flag (forwarded to
  * `confirm()` via `setGlobalYes`), and enables positional/pass-through
  * options on `up` and `exec` so that everything after `--` is forwarded
@@ -87,10 +87,10 @@ const program = new Command();
 program.enablePositionalOptions();
 
 program
-  .name('pi-sandbox')
+  .name('psbx')
   .description(
-    'Manage per-project Lima VMs for the pi coding agent.\n\n' +
-      'State directory: ~/.pi-sandbox (override with PI_SANDBOX_HOME)',
+    'Manage Lima VMs per working directory for project-isolated agentic coding.\n\n' +
+      'State directory: ~/.psbx (override with PSBX_HOME)',
   )
   .version('0.2.0')
   .option('-y, --yes', 'Skip confirmation prompts')
@@ -184,7 +184,7 @@ const profileCmd = program
 
 profileCmd
   .command('init <profile>')
-  .description('Initialize a pi-sandbox profile')
+  .description('Initialize a psbx profile')
   .option('--from-profile <name>', 'Copy an existing profile')
   .option(
     '--template <name>',
@@ -246,7 +246,7 @@ program
 program
   .command('list')
   .alias('ls')
-  .description('List all pi-sandbox VMs')
+  .description('List all psbx VMs')
   .option('--prune', 'Remove stale entries (VM and project dir both gone)')
   .action((options: ListOptions): Promise<void> => list(options));
 
@@ -257,11 +257,11 @@ program
     'after',
     '\n' +
       'Auto-detects shell from $SHELL when no argument given.\n\n' +
-      '  bash:   eval "$(pi-sandbox completion bash)"   # add to ~/.bashrc\n' +
-      '  zsh:    mkdir -p ~/.local/share/zsh/completions/completions && pi-sandbox completion zsh > ~/.local/share/zsh/completions/_pi-sandbox\n' +
+      '  bash:   eval "$(psbx completion bash)"   # add to ~/.bashrc\n' +
+      '  zsh:    mkdir -p ~/.local/share/zsh/completions/completions && psbx completion zsh > ~/.local/share/zsh/completions/_psbx\n' +
       '          # and add to ~/.zshrc (before compinit): fpath+=(~/.local/share/zsh/completions/completions)\n' +
-      '          # alternatively (after compinit): eval "$(pi-sandbox completion zsh)"\n' +
-      '  fish:   pi-sandbox completion fish > ~/.config/fish/completions/pi-sandbox.fish',
+      '          # alternatively (after compinit): eval "$(psbx completion zsh)"\n' +
+      '  fish:   psbx completion fish > ~/.config/fish/completions/psbx.fish',
   )
   .action((shell: string | undefined): Promise<void> => completion(shell));
 

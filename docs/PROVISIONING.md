@@ -1,6 +1,6 @@
 # Provisioning
 
-Profile provisioning scripts live inside each profile directory and are loaded by Lima with `provision[].file` entries in `lima.yaml`. pi-sandbox resolves relative file paths against the profile directory before calling `limactl start`.
+Profile provisioning scripts live inside each profile directory and are loaded by Lima with `provision[].file` entries in `lima.yaml`. psbx resolves relative file paths against the profile directory before calling `limactl start`.
 
 Provisioning is split into two phases:
 
@@ -10,7 +10,7 @@ Provisioning is split into two phases:
    `/mnt/host-config/*`, read passthrough environment variables, or write
    project-specific state.
 2. **Project finalization** runs after a project VM has been cloned from the
-   cache and started. pi-sandbox waits for `~/workdir`, creates declared
+   cache and started. psbx waits for `~/workdir`, creates declared
    `projectSessionDir` directories, copies each current profile config mount
    into the guest target, patches pi `settings.json#sessionDir`, fixes
    `auth.json` permissions, and links Copilot `session-state` into the project
@@ -49,7 +49,7 @@ The host profile is mounted read-only and is not mutated. Finalization copies
 `~/workdir/.agents/sessions`, and restricts `auth.json` permissions. The copied
 `~/.pi/agent` directory is part of the VM. Changes there are lost when the VM is
 deleted unless copied back to the host profile or exfiltrated into a new
-profile with `pi-sandbox profile fork <profile>`.
+profile with `psbx profile fork <profile>`.
 
 ## copilot-in-ubuntu profile template
 
@@ -58,7 +58,7 @@ The `copilot-in-ubuntu` profile template installs the [GitHub Copilot CLI](https
 Create it with:
 
 ```bash
-pi-sandbox profile init copilot --template copilot-in-ubuntu
+psbx profile init copilot --template copilot-in-ubuntu
 ```
 
 User-side cache provisioning:
@@ -72,16 +72,16 @@ replaces `~/.copilot/session-state` with a symlink to
 `~/workdir/.agents/copilot-sessions` so Copilot session history persists in the
 project directory.
 
-`pi-sandbox profile fork <name>` exfiltrates `~/.copilot` back into the new profile, but skips `session-state`, `session-store.db`, `logs`, and `ide` so workspace-bound data stays in the workspace.
+`psbx profile fork <name>` exfiltrates `~/.copilot` back into the new profile, but skips `session-state`, `session-store.db`, `logs`, and `ide` so workspace-bound data stays in the workspace.
 
 ## self-test profile template
 
-The self-test profile template uses an Alpine base image, 2 CPUs, 512MiB memory, and a small disk. Its system provisioning installs QEMU and downloads the latest Lima release plus additional guest agents. It is intended for pi-sandbox self-test harnesses that need to run inside a VM, including on hosts that fall back to software emulation.
+The self-test profile template uses an Alpine base image, 2 CPUs, 512MiB memory, and a small disk. Its system provisioning installs QEMU and downloads the latest Lima release plus additional guest agents. It is intended for psbx self-test harnesses that need to run inside a VM, including on hosts that fall back to software emulation.
 
 Create it with:
 
 ```bash
-pi-sandbox profile init self-test --self-test
+psbx profile init self-test --self-test
 ```
 
 ## Re-provisioning
@@ -90,7 +90,7 @@ Lima cache provisioning runs when the profile cache is built. Project finalizati
 runs each time a project VM is created or recreated from the cache. To apply profile changes that affect `lima.yaml` or config mount topology to an existing VM, recreate it:
 
 ```bash
-pi-sandbox up --only-recreate --profile <profile>
+psbx up --only-recreate --profile <profile>
 ```
 
 Project files and `~/workdir/.agents` persist because they live in the host project directory. VM-local state outside the project mount is discarded when the VM is recreated. Config mount content changes that do not affect Lima topology re-run finalization in place without a restart.

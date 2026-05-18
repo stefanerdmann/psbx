@@ -7,9 +7,9 @@ interface ListProfilesOptions {
 }
 
 // ---------------------------------------------------------------------------
-// pi-sandbox profile list (alias: profile ls)
+// psbx profile list (alias: profile ls)
 //
-// Lists all profiles in ~/.pi-sandbox/profiles/
+// Lists all profiles in ~/.psbx/profiles/
 // ---------------------------------------------------------------------------
 
 export async function listProfiles(options: ListProfilesOptions = {}): Promise<void> {

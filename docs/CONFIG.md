@@ -6,13 +6,13 @@ and typical workflows.
 
 ## State directory
 
-By default pi-sandbox stores all state (config, profiles, registry) under
-`~/.pi-sandbox`. Set the environment variable `PI_SANDBOX_HOME` to use a
+By default psbx stores all state (config, profiles, registry) under
+`~/.psbx`. Set the environment variable `PSBX_HOME` to use a
 different root location. In the following we refer to the default value
 for simplicity. The directory structure is:
 
 ```md
-~/.pi-sandbox/
+~/.psbx/
 ├── config.json
 └── profiles/
     └── <profile_name>/
@@ -20,14 +20,14 @@ for simplicity. The directory structure is:
 
 ## Global config
 
-The only global JSON config file is `~/.pi-sandbox/config.json`. It contains
-shared pi-sandbox state settings. The top-level keys are:
+The only global JSON config file is `~/.psbx/config.json`. It contains
+shared psbx state settings. The top-level keys are:
 
 | Field | Purpose | Manage sub-commands | Inspection sub-commands |
 |---|---|---|---|
 | `defaultProfile` | Profile used by lifecycle commands when `--profile` is omitted | `profile set-default` | `profile list` |
-| `vms` | Registry of project VM metadata managed by pi-sandbox | `up`, `stop`, `restart`, `delete` | `list`, `status` |
-| `caches` | Registry of hidden profile cache VMs managed by pi-sandbox | `cache delete [--all]` | `cache list`, `cache status` |
+| `vms` | Registry of project VM metadata managed by psbx | `up`, `stop`, `restart`, `delete` | `list`, `status` |
+| `caches` | Registry of hidden profile cache VMs managed by psbx | `cache delete [--all]` | `cache list`, `cache status` |
 
 For debugging and experimentation, you can inspect the current project VM's profile env with `status` (or `status --json`). Edit it in the profile with `profile edit --file env`.
 
@@ -36,7 +36,7 @@ For debugging and experimentation, you can inspect the current project VM's prof
 Profiles live under:
 
 ```text
-~/.pi-sandbox/profiles/<profile_name>/
+~/.psbx/profiles/<profile_name>/
 ├── env.yaml
 ├── lima.schema.json
 ├── lima.yaml
@@ -92,21 +92,21 @@ shellEnvAllowlist:
 profile directory and project directory respectively; absolute paths and `..`
 segments are rejected.
 
-A default profile is set automatically when you create your first profile, or explicitly via `pi-sandbox profile set-default <profile-name>`. It is used when `pi-sandbox up` is called without an explicit `--profile` argument. The name of the default profile is stored in `~/.pi-sandbox/config.json`, alongside information about the currently created VMs that are under management of pi-sandbox.
+A default profile is set automatically when you create your first profile, or explicitly via `psbx profile set-default <profile-name>`. It is used when `psbx up` is called without an explicit `--profile` argument. The name of the default profile is stored in `~/.psbx/config.json`, alongside information about the currently created VMs that are under management of psbx.
 
 Create a profile with:
 
 ```bash
-pi-sandbox profile init <profile-name>
+psbx profile init <profile-name>
 ```
 
 Additional initialization modes:
 
 ```bash
-pi-sandbox profile init work --from-profile default
-pi-sandbox profile init nested-test --self-test
-pi-sandbox profile init copilot --template copilot-in-ubuntu
-pi-sandbox profile fork work-local   # from the running current-project VM
+psbx profile init work --from-profile default
+psbx profile init nested-test --self-test
+psbx profile init copilot --template copilot-in-ubuntu
+psbx profile fork work-local   # from the running current-project VM
 ```
 
 `profile fork` snapshots the current VM's registered profile plus exfiltrated
@@ -138,7 +138,7 @@ Variable names must match:
 
 ## Lima YAML
 
-`lima.yaml` is a normal Lima config. pi-sandbox loads it, resolves profile-relative `provision[].file` paths, then adds dynamic read/write mounts:
+`lima.yaml` is a normal Lima config. psbx loads it, resolves profile-relative `provision[].file` paths, then adds dynamic read/write mounts:
 
 | Host | Guest | Writable |
 |---|---|---|
@@ -158,15 +158,15 @@ provision:
 Provisioning scripts are cache-time scripts. They should install tools and
 configure the base guest only. Project-specific work such as waiting for
 `~/workdir`, copying `/mnt/host-config/<name>` into the guest target, and linking
-session directories is performed by pi-sandbox finalization after cloning.
+session directories is performed by psbx finalization after cloning.
 
 ### Configuration precedence
 
 The effective Lima config for VM creation is resolved in this order:
 
 1. Profile `lima.yaml`
-2. Project-specific `<project>/.pi-sandbox/lima.yaml`
-3. Extra `pi-sandbox up -- <limactl start args...>` arguments
+2. Project-specific `<project>/.psbx/lima.yaml`
+3. Extra `psbx up -- <limactl start args...>` arguments
 
 The project YAML is intentionally restricted to:
 
@@ -176,12 +176,12 @@ memory: "16GiB"
 disk: "80GiB"
 ```
 
-Any other top-level key is rejected before VM creation. Extra arguments after `--` are not inspected by pi-sandbox and are forwarded to `limactl start`. Because these arguments are opaque creation-time inputs, they bypass the profile cache for that VM creation.
+Any other top-level key is rejected before VM creation. Extra arguments after `--` are not inspected by psbx and are forwarded to `limactl start`. Because these arguments are opaque creation-time inputs, they bypass the profile cache for that VM creation.
 
 Example one-off Lima override (bypasses VM caching):
 
 ```bash
-pi-sandbox up -- --cpus=6 --memory=12GiB
+psbx up -- --cpus=6 --memory=12GiB
 ```
 
 ### Host CA certificate injection
@@ -198,7 +198,7 @@ This injects host CA certificates into the VM trust store. Corporate proxy CAs a
 
 ## Pi agent configuration
 
-Everything under `~/.pi-sandbox/profiles/<profile>/pi/agent` is mounted read-only at `/mnt/host-config/agent` and copied into the guest as `~/.pi/agent` during project VM finalization. This can include, but is not limited to:
+Everything under `~/.psbx/profiles/<profile>/pi/agent` is mounted read-only at `/mnt/host-config/agent` and copied into the guest as `~/.pi/agent` during project VM finalization. This can include, but is not limited to:
 
 | Content | Reference |
 |---|---|
@@ -209,7 +209,7 @@ Everything under `~/.pi-sandbox/profiles/<profile>/pi/agent` is mounted read-onl
 | `auth.json`, `models.json` | https://pi.dev/docs/latest/authentication |
 | `mcp.json` | https://pi.dev/packages/pi-mcp-adapter |
 
-None of these files are required from pi-sandbox's perspective. If `settings.json` exists, the guest copy is patched after copying so `sessionDir` points to the project:
+None of these files are required from psbx's perspective. If `settings.json` exists, the guest copy is patched after copying so `sessionDir` points to the project:
 
 ```json
 {
@@ -217,12 +217,12 @@ None of these files are required from pi-sandbox's perspective. If `settings.jso
 }
 ```
 
-The profile `pi/agent` directory may be a symlink to `~/.pi/agent`. pi-sandbox resolves and mounts the symlink target read-only, then copies its contents into the VM.
+The profile `pi/agent` directory may be a symlink to `~/.pi/agent`. psbx resolves and mounts the symlink target read-only, then copies its contents into the VM.
 
 The host profile is not mutated by the VM. Changes made inside the guest to `~/.pi/agent` last only for the lifetime of that VM. Persist configuration changes by writing them under `~/workdir/.agents`, manually copying them back to the host profile, or forking the running VM into a new profile:
 
 ```bash
-pi-sandbox profile fork new-profile
+psbx profile fork new-profile
 ```
 
 ## GitHub Copilot CLI configuration
@@ -232,8 +232,8 @@ The `copilot-in-ubuntu` profile template installs the
 in the VM. Create a profile with:
 
 ```bash
-pi-sandbox profile init copilot --template copilot-in-ubuntu
-cp -a ~/.copilot/.            ~/.pi-sandbox/profiles/copilot/copilot/   # optional
+psbx profile init copilot --template copilot-in-ubuntu
+cp -a ~/.copilot/.            ~/.psbx/profiles/copilot/copilot/   # optional
 ```
 
 The profile mounts the Copilot config directory:

@@ -110,8 +110,8 @@ describe('findCacheUnsafePath', { concurrency: true }, () => {
 
 describe('validateConfig', { concurrency: false }, () => {
   it('rejects provisioning scripts that depend on dynamic mounts', () => {
-    const profileDir = mkdtempSync(join(tmpdir(), 'pi-cache-unsafe-profile-'));
-    const projectDir = mkdtempSync(join(tmpdir(), 'pi-cache-unsafe-project-'));
+    const profileDir = mkdtempSync(join(tmpdir(), 'psbx-cache-unsafe-profile-'));
+    const projectDir = mkdtempSync(join(tmpdir(), 'psbx-cache-unsafe-project-'));
     try {
       const provisionPath = join(profileDir, 'provision-user.sh');
       writeFileSync(
@@ -154,8 +154,8 @@ describe('validateConfig', { concurrency: false }, () => {
   });
 
   it('rejects inline provisioning scripts that depend on dynamic mounts', () => {
-    const profileDir = mkdtempSync(join(tmpdir(), 'pi-cache-unsafe-inline-profile-'));
-    const projectDir = mkdtempSync(join(tmpdir(), 'pi-cache-unsafe-inline-project-'));
+    const profileDir = mkdtempSync(join(tmpdir(), 'psbx-cache-unsafe-inline-profile-'));
+    const projectDir = mkdtempSync(join(tmpdir(), 'psbx-cache-unsafe-inline-project-'));
     try {
       writeFileSync(
         join(profileDir, 'lima.yaml'),

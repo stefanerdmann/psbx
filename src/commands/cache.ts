@@ -1,5 +1,5 @@
 /**
- * `pi-sandbox cache list | status | delete` — management surface for the
+ * `psbx cache list | status | delete` — management surface for the
  * per-profile clone-source VMs that `up` clones project VMs from.
  *
  * Caches are content-addressed: their identity is derived from the rendered

@@ -50,18 +50,18 @@ describe('formatBytes', { concurrency: true }, () => {
 describe('upHint', { concurrency: true }, () => {
   it('returns bare command when profile is the default', () => {
     const hint: string = upHint('default', 'default');
-    assert.strictEqual(hint, '`pi-sandbox up`');
+    assert.strictEqual(hint, '`psbx up`');
   });
 
   it('includes --profile when profile differs from default', () => {
-    assert.strictEqual(upHint('custom', 'default'), '`pi-sandbox up --profile custom`');
+    assert.strictEqual(upHint('custom', 'default'), '`psbx up --profile custom`');
   });
 
   it('returns bare command when profileName is null', () => {
-    assert.strictEqual(upHint(null, 'default'), '`pi-sandbox up`');
+    assert.strictEqual(upHint(null, 'default'), '`psbx up`');
   });
 
   it('returns bare command when profileName is undefined', () => {
-    assert.strictEqual(upHint(undefined, 'default'), '`pi-sandbox up`');
+    assert.strictEqual(upHint(undefined, 'default'), '`psbx up`');
   });
 });

@@ -60,7 +60,7 @@ describe('mountPointFor', { concurrency: true }, () => {
 
 describe('loadProjectOverride', { concurrency: true }, () => {
   it('returns empty object when override file does not exist', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'pi-override-'));
+    const dir = mkdtempSync(join(tmpdir(), 'psbx-override-'));
     try {
       assert.deepStrictEqual(loadProjectOverride(dir), {});
     } finally {
@@ -69,10 +69,10 @@ describe('loadProjectOverride', { concurrency: true }, () => {
   });
 
   it('parses valid override keys', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'pi-override-'));
+    const dir = mkdtempSync(join(tmpdir(), 'psbx-override-'));
     try {
-      mkdirSync(join(dir, '.pi-sandbox'), { recursive: true });
-      writeFileSync(join(dir, '.pi-sandbox', 'lima.yaml'), 'cpus: 4\nmemory: 8GiB\n');
+      mkdirSync(join(dir, '.psbx'), { recursive: true });
+      writeFileSync(join(dir, '.psbx', 'lima.yaml'), 'cpus: 4\nmemory: 8GiB\n');
       const override = loadProjectOverride(dir);
       assert.strictEqual(override.cpus, 4);
       assert.strictEqual(override.memory, '8GiB');
@@ -82,10 +82,10 @@ describe('loadProjectOverride', { concurrency: true }, () => {
   });
 
   it('rejects unsupported keys', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'pi-override-'));
+    const dir = mkdtempSync(join(tmpdir(), 'psbx-override-'));
     try {
-      mkdirSync(join(dir, '.pi-sandbox'), { recursive: true });
-      writeFileSync(join(dir, '.pi-sandbox', 'lima.yaml'), 'cpus: 4\nimages: []\n');
+      mkdirSync(join(dir, '.psbx'), { recursive: true });
+      writeFileSync(join(dir, '.psbx', 'lima.yaml'), 'cpus: 4\nimages: []\n');
       assert.throws(() => loadProjectOverride(dir), /Unsupported key/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -93,10 +93,10 @@ describe('loadProjectOverride', { concurrency: true }, () => {
   });
 
   it('rejects non-integer cpus', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'pi-override-'));
+    const dir = mkdtempSync(join(tmpdir(), 'psbx-override-'));
     try {
-      mkdirSync(join(dir, '.pi-sandbox'), { recursive: true });
-      writeFileSync(join(dir, '.pi-sandbox', 'lima.yaml'), 'cpus: 1.5\n');
+      mkdirSync(join(dir, '.psbx'), { recursive: true });
+      writeFileSync(join(dir, '.psbx', 'lima.yaml'), 'cpus: 1.5\n');
       assert.throws(() => loadProjectOverride(dir), /positive integer/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -104,10 +104,10 @@ describe('loadProjectOverride', { concurrency: true }, () => {
   });
 
   it('rejects invalid memory format', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'pi-override-'));
+    const dir = mkdtempSync(join(tmpdir(), 'psbx-override-'));
     try {
-      mkdirSync(join(dir, '.pi-sandbox'), { recursive: true });
-      writeFileSync(join(dir, '.pi-sandbox', 'lima.yaml'), 'memory: lots\n');
+      mkdirSync(join(dir, '.psbx'), { recursive: true });
+      writeFileSync(join(dir, '.psbx', 'lima.yaml'), 'memory: lots\n');
       assert.throws(() => loadProjectOverride(dir), /Lima size string/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -128,7 +128,7 @@ import { resolveProfile } from '../../src/config.ts';
 import type { LimaConfig, LimaMount, Profile } from '../../src/types.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const BIN = resolve(__dirname, '..', '..', 'bin', 'pi-sandbox.ts');
+const BIN = resolve(__dirname, '..', '..', 'bin', 'psbx.ts');
 
 type RunOptions = {
   HOME?: string;
@@ -163,8 +163,8 @@ function run(
 
 describe('buildLimaConfig', { concurrency: false }, () => {
   it('mounts each profile config subfolder under /mnt/host-config/<name>', () => {
-    const home = mkdtempSync(join(tmpdir(), 'pi-mounts-home-'));
-    const proj = mkdtempSync(join(tmpdir(), 'pi-mounts-proj-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-mounts-home-'));
+    const proj = mkdtempSync(join(tmpdir(), 'psbx-mounts-proj-'));
     const origHome = process.env.HOME;
     try {
       const r = run(['profile', 'init', 'co', '--template', 'copilot-in-ubuntu'], {
@@ -183,7 +183,7 @@ describe('buildLimaConfig', { concurrency: false }, () => {
         `expected workdir mount, got: ${mountPoints}`,
       );
       assert.ok(
-        !mountPoints.some((p) => p.startsWith('/mnt/pi-host-config')),
+        !mountPoints.some((p) => p.startsWith('/mnt/psbx-host-config')),
         `legacy mount still present: ${mountPoints}`,
       );
     } finally {
@@ -194,8 +194,8 @@ describe('buildLimaConfig', { concurrency: false }, () => {
   });
 
   it('buildCacheLimaConfig excludes project and profile config dynamic mounts', () => {
-    const profileDir = mkdtempSync(join(tmpdir(), 'pi-cache-profile-'));
-    const projectDir = mkdtempSync(join(tmpdir(), 'pi-cache-project-'));
+    const profileDir = mkdtempSync(join(tmpdir(), 'psbx-cache-profile-'));
+    const projectDir = mkdtempSync(join(tmpdir(), 'psbx-cache-project-'));
     try {
       writeFileSync(
         join(profileDir, 'lima.yaml'),
@@ -243,8 +243,8 @@ describe('buildLimaConfig', { concurrency: false }, () => {
   });
 
   it('buildProjectInstanceLimaYaml preserves expanded instance fields while adding dynamic mounts', () => {
-    const profileDir = mkdtempSync(join(tmpdir(), 'pi-instance-profile-'));
-    const projectDir = mkdtempSync(join(tmpdir(), 'pi-instance-project-'));
+    const profileDir = mkdtempSync(join(tmpdir(), 'psbx-instance-profile-'));
+    const projectDir = mkdtempSync(join(tmpdir(), 'psbx-instance-project-'));
     try {
       const configDir = join(profileDir, 'copilot');
       mkdirSync(configDir, { recursive: true });

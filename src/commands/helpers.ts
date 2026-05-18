@@ -366,7 +366,7 @@ function provisionVm({
 }: ProvisionVmOptions): void {
   prepareProjectState(profile, projectDir);
 
-  const tmpDir = mkdtempSync(join(tmpdir(), 'pi-sandbox-'));
+  const tmpDir = mkdtempSync(join(tmpdir(), 'psbx-'));
   const tmpPath = join(tmpDir, 'lima.yaml');
   writeLimaYaml(profile, projectDir, tmpPath);
 
@@ -401,9 +401,7 @@ function provisionVm({
 
   console.log('');
   console.log(`Sandbox '${vmName}' is ready!`);
-  console.log(
-    'Run `pi-sandbox exec` to run a command, or `pi-sandbox up` to enter the default shell.',
-  );
+  console.log('Run `psbx exec` to run a command, or `psbx up` to enter the default shell.');
 }
 
 export {

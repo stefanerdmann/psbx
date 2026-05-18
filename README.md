@@ -1,28 +1,28 @@
-# pi-sandbox
+# psbx — Project Sandbox
 
-A thin wrapper to manage a development VM per project. Mainly focused on running agents like the [pi coding agent](https://pi.dev/) in a storage-isolated environment. pi-sandbox gives each project its own [Lima](https://lima-vm.io) VM with your agent configuration, API tokens, and project files ready to go, while keeping the host system clean and preventing cross-project interference.
+`psbx` (project sandbox) is a thin wrapper to manage a development VM per project. Mainly focused on running agents like the [pi coding agent](https://pi.dev/) in a storage-isolated environment. psbx gives each project its own [Lima](https://lima-vm.io) VM with your agent configuration, API tokens, and project files ready to go, while keeping the host system clean and preventing cross-project interference.
 
 **Key benefits:**
 
 - **Isolation** — each project runs in its own VM; agent activity cannot affect the host or other projects.
 - **Reproducibility** — profiles capture the full environment (OS, packages, agent config) so you can recreate identical sandboxes at will.
-- **Simplicity** — a single `pi-sandbox up` command creates, starts, and enters the sandbox.
+- **Simplicity** — a single `psbx up` command creates, starts, and enters the sandbox.
 
 ## Prerequisites
 
 | Requirement | Install | Why |
 |---|---|---|
 | **Lima** | `brew install lima` | Manages the Linux VMs |
-| **Node.js ≥ 26** | `brew install node` | Runs the pi-sandbox CLI (uses built-in TypeScript support) |
+| **Node.js ≥ 26** | `brew install node` | Runs the psbx CLI (uses built-in TypeScript support) |
 
 ## Install
 
-pi-sandbox is not published on npm. Clone the repository and install from the
+psbx is not published on npm. Clone the repository and install from the
 checkout:
 
 ```bash
-git clone https://github.com/stefanerdmann/pi-sandbox.git
-cd pi-sandbox
+git clone https://github.com/stefanerdmann/psbx.git
+cd psbx
 npm install        # installs dependencies and compiles TypeScript → dist/
 npm install -g .
 ```
@@ -35,7 +35,7 @@ This quick start uses [pi coding agent](https://pi.dev/). See [Concepts](#concep
 
 First create a profile:
 ```bash
-pi-sandbox profile init <profile-name>
+psbx profile init <profile-name>
 ```
 If you have a pi configured on the host `~/.pi/agent/.`, you can optionally add the flags
 `--copy-from-host` or `--symlink-from-host`.
@@ -43,32 +43,32 @@ If you have a pi configured on the host `~/.pi/agent/.`, you can optionally add 
 Then launch a sandbox from any project directory:
 ```
 cd ~/projects/my-project
-pi-sandbox up
+psbx up
 ```
 You land in `~/workdir` inside the VM, which is your host project directory mounted read-write.
 The pi coding agent starts automatically.
 
 ## Concepts
 
-pi-sandbox uses a profile-centered configuration hierarchy:
+psbx uses a profile-centered configuration hierarchy:
 
-1. **Profile templates** (shipped) — read-only blueprints bundled with pi-sandbox
-2. **Profiles** (user) — customizable copies under `~/.pi-sandbox/profiles/` and the source of truth for Lima and env settings
+1. **Profile templates** (shipped) — read-only blueprints bundled with psbx
+2. **Profiles** (user) — customizable copies under `~/.psbx/profiles/` and the source of truth for Lima and env settings
 3. **Registry metadata** (per-VM) — project/profile binding and hashes in `config.json`
 
-You start from one of the shipped profiles that can be selected during `pi-sandbox profile init --template ...`
+You start from one of the shipped profiles that can be selected during `psbx profile init --template ...`
 
 - `pi-in-ubuntu`: default; used in the quick-start, or
 - `copilot-in-ubuntu` geared towards usage of GitHub Copilot CLI instead of pi.
 
 For details, see [Pi agent configuration](docs/CONFIG.md#pi-agent-configuration) and [GitHub Copilot CLI configuration](docs/CONFIG.md#github-copilot-cli-configuration) in the Configuration Reference.
 
-After initialization, you should `pi-sandbox profile edit <profile-name>` to adapt
+After initialization, you should `psbx profile edit <profile-name>` to adapt
 the profile to your needs. This profile then defines the common configuration as many
 project-specific VMs you like to create. You can create multiple independent profiles
 to serve different kinds of use-cases.
 
-Changes to a profile trigger VM recreation on next `pi-sandbox up` for projects using
+Changes to a profile trigger VM recreation on next `psbx up` for projects using
 that profile (as detected by comparison to the registry metadata).
 
 See [docs/CONCEPTS.md](docs/CONCEPTS.md) for a detailed explanation with
@@ -80,7 +80,7 @@ See [docs/CONFIG.md](docs/CONFIG.md) for a detailed explanation of the provided
 configuration options. Here, we list two typical customizations. Edit Lima settings with
 
 ```bash
-pi-sandbox profile edit <profile-name> [--file lima|env]
+psbx profile edit <profile-name> [--file lima|env]
 ```
 
 ### How do I pass through environment variables?
@@ -93,7 +93,7 @@ shellEnvAllowlist:
   - GITHUB_MCP_TOKEN
 ```
 
-`pi-sandbox up` and `pi-sandbox exec` read this allowlist from the registered profile.
+`psbx up` and `psbx exec` read this allowlist from the registered profile.
 
 ### How can I use a host CA certificate?
 
@@ -108,26 +108,26 @@ caCerts:
 
 ### Where are my profiles stored?
 
-All state, including profile configuration, lives under `~/.pi-sandbox` by default.
-You and set `PI_SANDBOX_HOME` to use a different location, e.g.:
+All state, including profile configuration, lives under `~/.psbx` by default.
+You and set `PSBX_HOME` to use a different location, e.g.:
 
 ```bash
-export PI_SANDBOX_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/pi-sandbox"
+export PSBX_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/psbx"
 ```
 
 ## Lima configuration precedence
 
 VM creation merges Lima settings from the profile, an optional project-level
-override (`<project>/.pi-sandbox/lima.yaml`, limited to `cpus`/`memory`/`disk`),
-and any extra `pi-sandbox up -- <args>` passed to `limactl start`.
+override (`<project>/.psbx/lima.yaml`, limited to `cpus`/`memory`/`disk`),
+and any extra `psbx up -- <args>` passed to `limactl start`.
 See [docs/CONFIG.md — Configuration precedence](docs/CONFIG.md#configuration-precedence)
 for the full resolution order and examples.
 
 ## Profile VM cache
 
 `up` uses a transparent Lima clone-backed cache for normal VM creation. On the
-first create for a profile/cache key, pi-sandbox prepares a hidden stopped Lima
-instance named like `pi-cache-<cacheKey[0..12]>`. Later project VMs using the same
+first create for a profile/cache key, psbx prepares a hidden stopped Lima
+instance named like `psbx-cache-<cacheKey[0..12]>`. Later project VMs using the same
 effective cache key are created with `limactl clone`, then finalized for the
 current project.
 
@@ -141,16 +141,16 @@ identical cache Lima config share one cache. New VMs receive current profile
 config during finalization; existing VMs re-run finalization in place when
 copied profile config content changes.
 
-Opaque extra arguments after `--` bypass the cache because pi-sandbox cannot know
+Opaque extra arguments after `--` bypass the cache because psbx cannot know
 which creation-time state they affect.
 
 Inspect and manage caches with:
 
 ```bash
-pi-sandbox cache list              # alias: cache ls
-pi-sandbox cache status            # hit/miss for this project/profile cache key
-pi-sandbox cache delete            # delete this project's matching cache
-pi-sandbox cache delete --all      # delete every registered cache
+psbx cache list              # alias: cache ls
+psbx cache status            # hit/miss for this project/profile cache key
+psbx cache delete            # delete this project's matching cache
+psbx cache delete --all      # delete every registered cache
 ```
 
 `cache status` and `cache delete` use the current project's registered profile
@@ -161,36 +161,36 @@ or delete the cache key for a specific profile.
 
 | Command | Description | Key options |
 |---|---|---|
-| `pi-sandbox up` | Bring sandbox up: create, start, and enter in one step | `--profile <name>`, `--shell`, `--only-create`, `--only-recreate`, `--only-start`, `--force-recreate` |
-| `pi-sandbox exec [-- cmd...]` | Run a one-off command in the sandbox (auto-starts if stopped) | `--shell` |
-| `pi-sandbox profile init <profile>` | Create a new profile from a shipped profile template or existing profile | `--template <name>` (pi-in-ubuntu, self-test, copilot-in-ubuntu), `--from-profile <name>`, `--self-test`, `--copy-from-host`, `--symlink-from-host`, `--set-as-default` |
-| `pi-sandbox stop` | Stop the VM | `-f, --force` |
-| `pi-sandbox restart` | Stop and then start the VM | `-f, --force` |
-| `pi-sandbox delete [vm-name]` | Delete a VM (defaults to current project) | `-f, --force`, `--all-registered` |
-| `pi-sandbox cache list` | List caches (alias: `cache ls`) | |
-| `pi-sandbox cache status` | Show whether the current project/profile has a matching cache | `--profile <name>` |
-| `pi-sandbox cache delete` | Delete the current project/profile matching cache | `--profile <name>`, `-f, --force`, `--all` |
-| `pi-sandbox profile delete [name]` | Delete a profile (warns if in use) | `-f, --force`, `--all` |
-| `pi-sandbox profile list` | List all profiles (alias: `profile ls`) | |
-| `pi-sandbox profile set-default <name>` | Set the default profile | |
-| `pi-sandbox profile edit [profile]` | Open a profile in `$EDITOR` | `--file <file>` (lima, env, or relative path) |
-| `pi-sandbox profile fork <new-profile>` | Snapshot the running current-project VM profile and guest config into a new profile, then rebase the VM to it without restart/recreate | |
-| `pi-sandbox status` | Show current project VM status, environment, and sync state | |
-| `pi-sandbox list` | List registered VMs (alias: `ls`) | |
-| `pi-sandbox logs` | Show cloud-init logs for the project and its cache VM (failed cache VMs are kept for inspection) | |
-| `pi-sandbox completion [shell]` | Generate shell completion scripts (bash, zsh, fish) | |
+| `psbx up` | Bring sandbox up: create, start, and enter in one step | `--profile <name>`, `--shell`, `--only-create`, `--only-recreate`, `--only-start`, `--force-recreate` |
+| `psbx exec [-- cmd...]` | Run a one-off command in the sandbox (auto-starts if stopped) | `--shell` |
+| `psbx profile init <profile>` | Create a new profile from a shipped profile template or existing profile | `--template <name>` (pi-in-ubuntu, self-test, copilot-in-ubuntu), `--from-profile <name>`, `--self-test`, `--copy-from-host`, `--symlink-from-host`, `--set-as-default` |
+| `psbx stop` | Stop the VM | `-f, --force` |
+| `psbx restart` | Stop and then start the VM | `-f, --force` |
+| `psbx delete [vm-name]` | Delete a VM (defaults to current project) | `-f, --force`, `--all-registered` |
+| `psbx cache list` | List caches (alias: `cache ls`) | |
+| `psbx cache status` | Show whether the current project/profile has a matching cache | `--profile <name>` |
+| `psbx cache delete` | Delete the current project/profile matching cache | `--profile <name>`, `-f, --force`, `--all` |
+| `psbx profile delete [name]` | Delete a profile (warns if in use) | `-f, --force`, `--all` |
+| `psbx profile list` | List all profiles (alias: `profile ls`) | |
+| `psbx profile set-default <name>` | Set the default profile | |
+| `psbx profile edit [profile]` | Open a profile in `$EDITOR` | `--file <file>` (lima, env, or relative path) |
+| `psbx profile fork <new-profile>` | Snapshot the running current-project VM profile and guest config into a new profile, then rebase the VM to it without restart/recreate | |
+| `psbx status` | Show current project VM status, environment, and sync state | |
+| `psbx list` | List registered VMs (alias: `ls`) | |
+| `psbx logs` | Show cloud-init logs for the project and its cache VM (failed cache VMs are kept for inspection) | |
+| `psbx completion [shell]` | Generate shell completion scripts (bash, zsh, fish) | |
 
 Global option: `-y, --yes` skips confirmation prompts.
 
 ## Project hygiene
 
-Running `pi-sandbox up` creates a `.agents/` directory (and optionally
-`.pi-sandbox/lima.yaml`) in the project root. Consider adding these to your
+Running `psbx up` creates a `.agents/` directory (and optionally
+`.psbx/lima.yaml`) in the project root. Consider adding these to your
 `.gitignore`:
 
 ```gitignore
 .agents/
-.pi-sandbox/
+.psbx/
 ```
 
 ## Development
@@ -198,14 +198,14 @@ Running `pi-sandbox up` creates a `.agents/` directory (and optionally
 The source is TypeScript. Node.js ≥ 26 has built-in type stripping, so you can run `.ts` files directly during development — no compilation step needed in the dev loop.
 
 ```bash
-node bin/pi-sandbox.ts --help        # run directly from source
+node bin/psbx.ts --help        # run directly from source
 npm run typecheck                     # type-check without emitting
 npm run build                         # compile to dist/ (for publish/install)
 ```
 
 ### Testing
 
-pi-sandbox uses Node.js built-in test runner (`node --test`). Tests are split into two suites:
+psbx uses Node.js built-in test runner (`node --test`). Tests are split into two suites:
 
 | Script | What it tests | Requirements |
 |---|---|---|
@@ -225,7 +225,7 @@ The lifecycle tests use a self-test profile. This is a lightweight Alpine-based 
 Create it manually for experimentation:
 
 ```bash
-pi-sandbox profile init self-test --self-test
+psbx profile init self-test --self-test
 ```
 
 The lifecycle tests create the self-test profile automatically in a temporary home directory, so you do not need to set it up before running `npm run test:slow`.

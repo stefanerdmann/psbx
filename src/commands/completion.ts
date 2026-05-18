@@ -1,28 +1,28 @@
 /**
- * `pi-sandbox completion [bash|zsh|fish]` — emit a static completion
+ * `psbx completion [bash|zsh|fish]` — emit a static completion
  * script for the given shell on stdout. Auto-detects the shell from
  * `$SHELL` when no argument is given.
  *
  * The completion scripts are hand-maintained string constants rather than
  * being generated from commander's metadata: commander's auto-generated
  * completions don't cover nested subcommands (cache/profile) or shell out
- * to `pi-sandbox profile list --plain` for dynamic profile-name
+ * to `psbx profile list --plain` for dynamic profile-name
  * completion, both of which we want.
  */
 
 import { handleError } from './helpers.ts';
 
-const BASH_COMPLETION = `# pi-sandbox bash completion
+const BASH_COMPLETION = `# psbx bash completion
 #
 # Installation:
 #
-#     echo 'eval "$(pi-sandbox completion bash)"' >> ~/.bashrc
+#     echo 'eval "$(psbx completion bash)"' >> ~/.bashrc
 
-_pi_sandbox_profiles() {
-  pi-sandbox profile list --plain 2>/dev/null
+_psbx_profiles() {
+  psbx profile list --plain 2>/dev/null
 }
 
-_pi_sandbox() {
+_psbx() {
   local cur prev commands profile_commands cache_commands
   COMPREPLY=()
   cur="\${COMP_WORDS[COMP_CWORD]}"
@@ -64,18 +64,18 @@ _pi_sandbox() {
         COMPREPLY=( $(compgen -W "--from-profile --template --self-test --copy-from-host --symlink-from-host --set-as-default" -- "\${cur}") )
         ;;
       delete)
-        COMPREPLY=( $(compgen -W "--force --all $(_pi_sandbox_profiles)" -- "\${cur}") )
+        COMPREPLY=( $(compgen -W "--force --all $(_psbx_profiles)" -- "\${cur}") )
         ;;
       set-default)
-        COMPREPLY=( $(compgen -W "$(_pi_sandbox_profiles)" -- "\${cur}") )
+        COMPREPLY=( $(compgen -W "$(_psbx_profiles)" -- "\${cur}") )
         ;;
       edit)
-        COMPREPLY=( $(compgen -W "--file $(_pi_sandbox_profiles)" -- "\${cur}") )
+        COMPREPLY=( $(compgen -W "--file $(_psbx_profiles)" -- "\${cur}") )
         ;;
     esac
     case "\${prev}" in
       --from-profile)
-        COMPREPLY=( $(compgen -W "$(_pi_sandbox_profiles)" -- "\${cur}") )
+        COMPREPLY=( $(compgen -W "$(_psbx_profiles)" -- "\${cur}") )
         ;;
       --template)
         COMPREPLY=( $(compgen -W "pi-in-ubuntu self-test copilot-in-ubuntu" -- "\${cur}") )
@@ -92,7 +92,7 @@ _pi_sandbox() {
       COMPREPLY=( $(compgen -W "--shell" -- "\${cur}") )
       ;;
     --profile|--from-profile)
-      COMPREPLY=( $(compgen -W "$(_pi_sandbox_profiles)" -- "\${cur}") )
+      COMPREPLY=( $(compgen -W "$(_psbx_profiles)" -- "\${cur}") )
       ;;
     stop)
       COMPREPLY=( $(compgen -W "--force" -- "\${cur}") )
@@ -114,34 +114,34 @@ _pi_sandbox() {
       ;;
   esac
 }
-complete -F _pi_sandbox pi-sandbox
+complete -F _psbx psbx
 `;
 
-const ZSH_COMPLETION = `#compdef pi-sandbox
-# pi-sandbox zsh completion
+const ZSH_COMPLETION = `#compdef psbx
+# psbx zsh completion
 #
 # Installation:
 #
 #   Option 1 – file in $fpath (recommended):
 #     mkdir -p ~/.local/share/zsh/completions/completions
-#     pi-sandbox completion zsh > ~/.local/share/zsh/completions/completions/_pi-sandbox
+#     psbx completion zsh > ~/.local/share/zsh/completions/completions/_psbx
 #     # and add to ~/.zshrc BEFORE the compinit call:
 #     #   fpath+=(~/.local/share/zsh/completions/completions)
 #     #   autoload -Uz compinit && compinit
 #
 #   Option 2 – eval in ~/.zshrc (add AFTER compinit):
-#     eval "$(pi-sandbox completion zsh)"
+#     eval "$(psbx completion zsh)"
 
-_pi_sandbox_profiles() {
+_psbx_profiles() {
   local -a profiles
-  profiles=(\${(f)"$(pi-sandbox profile list --plain 2>/dev/null)"})
+  profiles=(\${(f)"$(psbx profile list --plain 2>/dev/null)"})
   _describe -t profiles 'profile' profiles
 }
 
-_pi_sandbox_profile_commands() {
+_psbx_profile_commands() {
   local -a profile_cmds
   profile_cmds=(
-    'init:Initialize a pi-sandbox profile'
+    'init:Initialize a psbx profile'
     'fork:Snapshot the current project VM into a new profile and rebase the VM onto it'
     'delete:Delete a profile'
     'list:List all profiles'
@@ -162,7 +162,7 @@ _pi_sandbox_profile_commands() {
       case $words[1] in
         init)
           _arguments \\
-            '--from-profile[Copy an existing profile]:profile:_pi_sandbox_profiles' \\
+            '--from-profile[Copy an existing profile]:profile:_psbx_profiles' \\
             '--template[Use a shipped profile template]:template:(pi-in-ubuntu self-test copilot-in-ubuntu)' \\
             '--self-test[Use the lightweight self-test profile template]' \\
             '--copy-from-host[Copy host config directories into the new profile]' \\
@@ -176,22 +176,22 @@ _pi_sandbox_profile_commands() {
           _arguments \\
             '(-f --force)'{-f,--force}'[Skip confirmation prompt]' \\
             '--all[Delete all profiles]' \\
-            '1:profile:_pi_sandbox_profiles'
+            '1:profile:_psbx_profiles'
           ;;
         set-default)
-          _arguments '1:profile:_pi_sandbox_profiles'
+          _arguments '1:profile:_psbx_profiles'
           ;;
         edit)
           _arguments \\
             '--file[Open a specific file]:file:(lima env)' \\
-            '1:profile:_pi_sandbox_profiles'
+            '1:profile:_psbx_profiles'
           ;;
       esac
       ;;
   esac
 }
 
-_pi_sandbox_cache_commands() {
+_psbx_cache_commands() {
   local -a cache_cmds
   cache_cmds=(
     'list:List all profile caches'
@@ -212,11 +212,11 @@ _pi_sandbox_cache_commands() {
       case $words[1] in
         status)
           _arguments \\
-            '(-p --profile)'{-p,--profile}'[Use a specific profile]:profile:_pi_sandbox_profiles'
+            '(-p --profile)'{-p,--profile}'[Use a specific profile]:profile:_psbx_profiles'
           ;;
         delete)
           _arguments \\
-            '(-p --profile)'{-p,--profile}'[Use a specific profile]:profile:_pi_sandbox_profiles' \\
+            '(-p --profile)'{-p,--profile}'[Use a specific profile]:profile:_psbx_profiles' \\
             '(-f --force)'{-f,--force}'[Skip confirmation prompt]' \\
             '--all[Delete all profile caches]'
           ;;
@@ -225,7 +225,7 @@ _pi_sandbox_cache_commands() {
   esac
 }
 
-_pi_sandbox() {
+_psbx() {
   local -a commands
   commands=(
     'up:Bring sandbox up: create, start, and enter in one step'
@@ -236,8 +236,8 @@ _pi_sandbox() {
     'cache:Manage hidden profile caches (list, status, delete)'
     'profile:Manage profiles (init, fork, delete, list, edit, set-default)'
     'status:Show VM status, environment, and sync state for the current project'
-    'list:List all pi-sandbox VMs'
-    'ls:List all pi-sandbox VMs'
+    'list:List all psbx VMs'
+    'ls:List all psbx VMs'
     'logs:Show cloud-init logs for the project VM and its profile cache VM'
     'completion:Generate shell completion scripts'
   )
@@ -251,13 +251,13 @@ _pi_sandbox() {
 
   case $state in
     command)
-      _describe -t commands 'pi-sandbox command' commands
+      _describe -t commands 'psbx command' commands
       ;;
     args)
       case $words[1] in
         up)
           _arguments \\
-            '(-p --profile)'{-p,--profile}'[Use a specific profile]:profile:_pi_sandbox_profiles' \\
+            '(-p --profile)'{-p,--profile}'[Use a specific profile]:profile:_psbx_profiles' \\
             '--shell[Open a plain shell instead of default command]' \\
             '--only-create[Only create the VM]' \\
             '--only-recreate[Only recreate the VM]' \\
@@ -283,10 +283,10 @@ _pi_sandbox() {
             '1:vm-name:'
           ;;
         cache)
-          _pi_sandbox_cache_commands
+          _psbx_cache_commands
           ;;
         profile)
-          _pi_sandbox_profile_commands
+          _psbx_profile_commands
           ;;
         list|ls)
           _arguments '--prune[Remove stale entries]'
@@ -302,131 +302,131 @@ _pi_sandbox() {
   esac
 }
 
-compdef _pi_sandbox pi-sandbox
+compdef _psbx psbx
 `;
 
-const FISH_COMPLETION = `# pi-sandbox fish completion
+const FISH_COMPLETION = `# psbx fish completion
 #
 # Installation:
 #
-#   pi-sandbox completion fish > ~/.config/fish/completions/pi-sandbox.fish
+#   psbx completion fish > ~/.config/fish/completions/psbx.fish
 
 # Helper: list profile names
-function __pi_sandbox_profiles
-  pi-sandbox profile list --plain 2>/dev/null
+function __psbx_profiles
+  psbx profile list --plain 2>/dev/null
 end
 
 # Helper: check if 'profile' subcommand is active but no profile subcommand yet
-function __pi_sandbox_needs_profile_subcmd
+function __psbx_needs_profile_subcmd
   set -l cmd (commandline -opc)
   test (count $cmd) -eq 2; and test "$cmd[2]" = "profile"
 end
 
 # Helper: check if profile subcommand matches
-function __pi_sandbox_profile_subcmd
+function __psbx_profile_subcmd
   set -l cmd (commandline -opc)
   test (count $cmd) -ge 3; and test "$cmd[2]" = "profile"; and test "$cmd[3]" = "$argv[1]"
 end
 
-function __pi_sandbox_needs_cache_subcmd
+function __psbx_needs_cache_subcmd
   set -l cmd (commandline -opc)
   test (count $cmd) -eq 2; and test "$cmd[2]" = "cache"
 end
 
-function __pi_sandbox_cache_subcmd
+function __psbx_cache_subcmd
   set -l cmd (commandline -opc)
   test (count $cmd) -ge 3; and test "$cmd[2]" = "cache"; and test "$cmd[3]" = "$argv[1]"
 end
 
 # Disable file completions by default
-complete -c pi-sandbox -f
+complete -c psbx -f
 
 # Global options
-complete -c pi-sandbox -s y -l yes -d 'Skip confirmation prompts'
+complete -c psbx -s y -l yes -d 'Skip confirmation prompts'
 
 # Commands
-complete -c pi-sandbox -n '__fish_use_subcommand' -a up -d 'Bring sandbox up: create, start, and enter in one step'
-complete -c pi-sandbox -n '__fish_use_subcommand' -a exec -d 'Run a one-off command in the sandbox'
-complete -c pi-sandbox -n '__fish_use_subcommand' -a stop -d 'Stop a running VM'
-complete -c pi-sandbox -n '__fish_use_subcommand' -a restart -d 'Stop and then start the VM'
-complete -c pi-sandbox -n '__fish_use_subcommand' -a delete -d 'Delete a VM (with confirmation)'
-complete -c pi-sandbox -n '__fish_use_subcommand' -a cache -d 'Manage hidden profile caches (list, status, delete)'
-complete -c pi-sandbox -n '__fish_use_subcommand' -a profile -d 'Manage profiles (init, fork, delete, list, edit, set-default)'
-complete -c pi-sandbox -n '__fish_use_subcommand' -a status -d 'Show VM status, environment, and sync state for the current project'
-complete -c pi-sandbox -n '__fish_use_subcommand' -a list -d 'List all pi-sandbox VMs'
-complete -c pi-sandbox -n '__fish_use_subcommand' -a ls -d 'List all pi-sandbox VMs'
-complete -c pi-sandbox -n '__fish_use_subcommand' -a logs -d 'Show cloud-init logs for the project VM and its profile cache VM'
-complete -c pi-sandbox -n '__fish_use_subcommand' -a completion -d 'Generate shell completion scripts'
+complete -c psbx -n '__fish_use_subcommand' -a up -d 'Bring sandbox up: create, start, and enter in one step'
+complete -c psbx -n '__fish_use_subcommand' -a exec -d 'Run a one-off command in the sandbox'
+complete -c psbx -n '__fish_use_subcommand' -a stop -d 'Stop a running VM'
+complete -c psbx -n '__fish_use_subcommand' -a restart -d 'Stop and then start the VM'
+complete -c psbx -n '__fish_use_subcommand' -a delete -d 'Delete a VM (with confirmation)'
+complete -c psbx -n '__fish_use_subcommand' -a cache -d 'Manage hidden profile caches (list, status, delete)'
+complete -c psbx -n '__fish_use_subcommand' -a profile -d 'Manage profiles (init, fork, delete, list, edit, set-default)'
+complete -c psbx -n '__fish_use_subcommand' -a status -d 'Show VM status, environment, and sync state for the current project'
+complete -c psbx -n '__fish_use_subcommand' -a list -d 'List all psbx VMs'
+complete -c psbx -n '__fish_use_subcommand' -a ls -d 'List all psbx VMs'
+complete -c psbx -n '__fish_use_subcommand' -a logs -d 'Show cloud-init logs for the project VM and its profile cache VM'
+complete -c psbx -n '__fish_use_subcommand' -a completion -d 'Generate shell completion scripts'
 
 # profile subcommands
-complete -c pi-sandbox -n '__pi_sandbox_needs_profile_subcmd' -a init -d 'Initialize a pi-sandbox profile'
-complete -c pi-sandbox -n '__pi_sandbox_needs_profile_subcmd' -a fork -d 'Snapshot the current project VM into a new profile and rebase the VM onto it'
-complete -c pi-sandbox -n '__pi_sandbox_needs_profile_subcmd' -a delete -d 'Delete a profile'
-complete -c pi-sandbox -n '__pi_sandbox_needs_profile_subcmd' -a list -d 'List all profiles'
-complete -c pi-sandbox -n '__pi_sandbox_needs_profile_subcmd' -a ls -d 'List all profiles'
-complete -c pi-sandbox -n '__pi_sandbox_needs_profile_subcmd' -a set-default -d 'Set the default profile'
-complete -c pi-sandbox -n '__pi_sandbox_needs_profile_subcmd' -a edit -d 'Open a profile in \\$EDITOR'
+complete -c psbx -n '__psbx_needs_profile_subcmd' -a init -d 'Initialize a psbx profile'
+complete -c psbx -n '__psbx_needs_profile_subcmd' -a fork -d 'Snapshot the current project VM into a new profile and rebase the VM onto it'
+complete -c psbx -n '__psbx_needs_profile_subcmd' -a delete -d 'Delete a profile'
+complete -c psbx -n '__psbx_needs_profile_subcmd' -a list -d 'List all profiles'
+complete -c psbx -n '__psbx_needs_profile_subcmd' -a ls -d 'List all profiles'
+complete -c psbx -n '__psbx_needs_profile_subcmd' -a set-default -d 'Set the default profile'
+complete -c psbx -n '__psbx_needs_profile_subcmd' -a edit -d 'Open a profile in \\$EDITOR'
 
 # profile init options
-complete -c pi-sandbox -n '__pi_sandbox_profile_subcmd init' -l from-profile -d 'Copy an existing profile' -r -a '(__pi_sandbox_profiles)'
-complete -c pi-sandbox -n '__pi_sandbox_profile_subcmd init' -l template -d 'Use a shipped profile template (pi-in-ubuntu, self-test, copilot-in-ubuntu)' -r -a 'pi-in-ubuntu self-test copilot-in-ubuntu'
-complete -c pi-sandbox -n '__pi_sandbox_profile_subcmd init' -l self-test -d 'Use the lightweight self-test profile template'
-complete -c pi-sandbox -n '__pi_sandbox_profile_subcmd init' -l copy-from-host -d 'Copy host config directories into the new profile'
-complete -c pi-sandbox -n '__pi_sandbox_profile_subcmd init' -l symlink-from-host -d 'Symlink host config directories into the new profile'
+complete -c psbx -n '__psbx_profile_subcmd init' -l from-profile -d 'Copy an existing profile' -r -a '(__psbx_profiles)'
+complete -c psbx -n '__psbx_profile_subcmd init' -l template -d 'Use a shipped profile template (pi-in-ubuntu, self-test, copilot-in-ubuntu)' -r -a 'pi-in-ubuntu self-test copilot-in-ubuntu'
+complete -c psbx -n '__psbx_profile_subcmd init' -l self-test -d 'Use the lightweight self-test profile template'
+complete -c psbx -n '__psbx_profile_subcmd init' -l copy-from-host -d 'Copy host config directories into the new profile'
+complete -c psbx -n '__psbx_profile_subcmd init' -l symlink-from-host -d 'Symlink host config directories into the new profile'
 
-complete -c pi-sandbox -n '__pi_sandbox_profile_subcmd init' -l set-as-default -d 'Set this profile as the default'
+complete -c psbx -n '__psbx_profile_subcmd init' -l set-as-default -d 'Set this profile as the default'
 
 # profile delete options
-complete -c pi-sandbox -n '__pi_sandbox_profile_subcmd delete' -s f -l force -d 'Skip confirmation prompt'
-complete -c pi-sandbox -n '__pi_sandbox_profile_subcmd delete' -l all -d 'Delete all profiles'
-complete -c pi-sandbox -n '__pi_sandbox_profile_subcmd delete' -a '(__pi_sandbox_profiles)' -d 'Profile name'
+complete -c psbx -n '__psbx_profile_subcmd delete' -s f -l force -d 'Skip confirmation prompt'
+complete -c psbx -n '__psbx_profile_subcmd delete' -l all -d 'Delete all profiles'
+complete -c psbx -n '__psbx_profile_subcmd delete' -a '(__psbx_profiles)' -d 'Profile name'
 
 # profile set-default options
-complete -c pi-sandbox -n '__pi_sandbox_profile_subcmd set-default' -a '(__pi_sandbox_profiles)' -d 'Profile name'
+complete -c psbx -n '__psbx_profile_subcmd set-default' -a '(__psbx_profiles)' -d 'Profile name'
 
 # profile edit options
-complete -c pi-sandbox -n '__pi_sandbox_profile_subcmd edit' -l file -d 'Open a specific file' -r -a 'lima env'
-complete -c pi-sandbox -n '__pi_sandbox_profile_subcmd edit' -a '(__pi_sandbox_profiles)' -d 'Profile name'
+complete -c psbx -n '__psbx_profile_subcmd edit' -l file -d 'Open a specific file' -r -a 'lima env'
+complete -c psbx -n '__psbx_profile_subcmd edit' -a '(__psbx_profiles)' -d 'Profile name'
 
 # cache subcommands
-complete -c pi-sandbox -n '__pi_sandbox_needs_cache_subcmd' -a list -d 'List all profile caches'
-complete -c pi-sandbox -n '__pi_sandbox_needs_cache_subcmd' -a ls -d 'List all profile caches'
-complete -c pi-sandbox -n '__pi_sandbox_needs_cache_subcmd' -a status -d 'Show whether the current project already has a matching profile cache'
-complete -c pi-sandbox -n '__pi_sandbox_needs_cache_subcmd' -a delete -d 'Delete the matching profile cache for the current project'
-complete -c pi-sandbox -n '__pi_sandbox_cache_subcmd status' -s p -l profile -d 'Use a specific profile' -r -a '(__pi_sandbox_profiles)'
-complete -c pi-sandbox -n '__pi_sandbox_cache_subcmd delete' -s p -l profile -d 'Use a specific profile' -r -a '(__pi_sandbox_profiles)'
-complete -c pi-sandbox -n '__pi_sandbox_cache_subcmd delete' -s f -l force -d 'Skip confirmation prompt'
-complete -c pi-sandbox -n '__pi_sandbox_cache_subcmd delete' -l all -d 'Delete all profile caches'
+complete -c psbx -n '__psbx_needs_cache_subcmd' -a list -d 'List all profile caches'
+complete -c psbx -n '__psbx_needs_cache_subcmd' -a ls -d 'List all profile caches'
+complete -c psbx -n '__psbx_needs_cache_subcmd' -a status -d 'Show whether the current project already has a matching profile cache'
+complete -c psbx -n '__psbx_needs_cache_subcmd' -a delete -d 'Delete the matching profile cache for the current project'
+complete -c psbx -n '__psbx_cache_subcmd status' -s p -l profile -d 'Use a specific profile' -r -a '(__psbx_profiles)'
+complete -c psbx -n '__psbx_cache_subcmd delete' -s p -l profile -d 'Use a specific profile' -r -a '(__psbx_profiles)'
+complete -c psbx -n '__psbx_cache_subcmd delete' -s f -l force -d 'Skip confirmation prompt'
+complete -c psbx -n '__psbx_cache_subcmd delete' -l all -d 'Delete all profile caches'
 
 # up options
-complete -c pi-sandbox -n '__fish_seen_subcommand_from up' -s p -l profile -d 'Use a specific profile' -r -a '(__pi_sandbox_profiles)'
-complete -c pi-sandbox -n '__fish_seen_subcommand_from up' -l shell -d 'Open a plain shell instead of default command'
-complete -c pi-sandbox -n '__fish_seen_subcommand_from up' -l only-create -d 'Only create the VM'
-complete -c pi-sandbox -n '__fish_seen_subcommand_from up' -l only-recreate -d 'Only recreate the VM'
-complete -c pi-sandbox -n '__fish_seen_subcommand_from up' -l only-start -d 'Only start the VM'
-complete -c pi-sandbox -n '__fish_seen_subcommand_from up' -l force-recreate -d 'Recreate the VM if it exists, create it otherwise'
+complete -c psbx -n '__fish_seen_subcommand_from up' -s p -l profile -d 'Use a specific profile' -r -a '(__psbx_profiles)'
+complete -c psbx -n '__fish_seen_subcommand_from up' -l shell -d 'Open a plain shell instead of default command'
+complete -c psbx -n '__fish_seen_subcommand_from up' -l only-create -d 'Only create the VM'
+complete -c psbx -n '__fish_seen_subcommand_from up' -l only-recreate -d 'Only recreate the VM'
+complete -c psbx -n '__fish_seen_subcommand_from up' -l only-start -d 'Only start the VM'
+complete -c psbx -n '__fish_seen_subcommand_from up' -l force-recreate -d 'Recreate the VM if it exists, create it otherwise'
 
 # stop options
-complete -c pi-sandbox -n '__fish_seen_subcommand_from stop' -s f -l force -d 'Force stop without graceful shutdown'
+complete -c psbx -n '__fish_seen_subcommand_from stop' -s f -l force -d 'Force stop without graceful shutdown'
 
 # restart options
-complete -c pi-sandbox -n '__fish_seen_subcommand_from restart' -s f -l force -d 'Force stop without graceful shutdown'
+complete -c psbx -n '__fish_seen_subcommand_from restart' -s f -l force -d 'Force stop without graceful shutdown'
 
 # exec options
-complete -c pi-sandbox -n '__fish_seen_subcommand_from exec' -l shell -d 'Open a plain shell instead of running a command'
+complete -c psbx -n '__fish_seen_subcommand_from exec' -l shell -d 'Open a plain shell instead of running a command'
 
 # delete options
-complete -c pi-sandbox -n '__fish_seen_subcommand_from delete' -s f -l force -d 'Skip confirmation prompt'
-complete -c pi-sandbox -n '__fish_seen_subcommand_from delete' -l all-registered -d 'Delete all registered VMs'
+complete -c psbx -n '__fish_seen_subcommand_from delete' -s f -l force -d 'Skip confirmation prompt'
+complete -c psbx -n '__fish_seen_subcommand_from delete' -l all-registered -d 'Delete all registered VMs'
 
 # list options
-complete -c pi-sandbox -n '__fish_seen_subcommand_from list ls' -l prune -d 'Remove stale entries'
+complete -c psbx -n '__fish_seen_subcommand_from list ls' -l prune -d 'Remove stale entries'
 
 # status options
-complete -c pi-sandbox -n '__fish_seen_subcommand_from status' -l json -d 'Output as JSON'
+complete -c psbx -n '__fish_seen_subcommand_from status' -l json -d 'Output as JSON'
 
 # completion options
-complete -c pi-sandbox -n '__fish_seen_subcommand_from completion' -a 'bash zsh fish' -d 'Shell type'
+complete -c psbx -n '__fish_seen_subcommand_from completion' -a 'bash zsh fish' -d 'Shell type'
 `;
 
 type SupportedShell = 'bash' | 'zsh' | 'fish';
@@ -454,7 +454,7 @@ export async function completion(shell: string | undefined): Promise<void> {
 
     if (!shell) {
       console.error('Error: Could not detect shell. Please specify one: bash, zsh, or fish');
-      console.error('Usage: pi-sandbox completion [bash|zsh|fish]');
+      console.error('Usage: psbx completion [bash|zsh|fish]');
       process.exit(1);
     }
 

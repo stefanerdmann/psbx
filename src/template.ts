@@ -2,7 +2,7 @@
  * Lima YAML rendering pipeline.
  *
  * Builds the effective `lima.yaml` for a project VM by merging the profile
- * Lima YAML with a small project-level override (`<project>/.pi-sandbox/
+ * Lima YAML with a small project-level override (`<project>/.psbx/
  * lima.yaml`, limited to `cpus`/`memory`/`disk`) and layering dynamic
  * mounts (the project workdir + each profile configMount). A "cache" YAML
  * variant excludes the dynamic mounts so that two projects sharing a
@@ -25,7 +25,7 @@ const GUEST_HOME = '/home/pi';
 const GUEST_WORKDIR = `${GUEST_HOME}/workdir`;
 const GUEST_PROJECT_AGENT_DIR = `${GUEST_WORKDIR}/.agents`;
 const HOST_CONFIG_BASE = '/mnt/host-config';
-const PROJECT_LIMA_PATH = join('.pi-sandbox', 'lima.yaml');
+const PROJECT_LIMA_PATH = join('.psbx', 'lima.yaml');
 const PROJECT_OVERRIDE_KEYS = new Set(['cpus', 'memory', 'disk']);
 
 function mountPointFor(mount: ConfigMount): string {

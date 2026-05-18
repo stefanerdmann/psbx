@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// pi-sandbox lifecycle tests
+// psbx lifecycle tests
 //
 // Full end-to-end tests that exercise the CLI against a real Lima VM using the
 // lightweight `self-test` profile. These are slow (VM provisioning takes
@@ -41,7 +41,7 @@ import { fileURLToPath } from 'node:url';
 import type { LimaInstance } from '../src/types.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const BIN = resolve(__dirname, '..', 'bin', 'pi-sandbox.ts');
+const BIN = resolve(__dirname, '..', 'bin', 'psbx.ts');
 
 // /tmp is a small tmpfs; use /var/tmp (main disk) so Lima has room for images.
 // Reuse the real user's Lima download cache to avoid re-fetching on every run.
@@ -91,8 +91,8 @@ describe('lifecycle', {
   let vmName: string;
 
   before(() => {
-    tmpHome = mkdtempSync(join(SMOKE_TMPDIR, 'pi-smoke-home-'));
-    projectDir = mkdtempSync(join(SMOKE_TMPDIR, 'pi-smoke-proj-'));
+    tmpHome = mkdtempSync(join(SMOKE_TMPDIR, 'psbx-smoke-home-'));
+    projectDir = mkdtempSync(join(SMOKE_TMPDIR, 'psbx-smoke-proj-'));
     vmName = vmNameFrom(projectDir);
     const initResult = run(['profile', 'init', 'self-test', '--self-test'], {
       HOME: tmpHome,
@@ -104,7 +104,7 @@ describe('lifecycle', {
   after(() => {
     // Clean up the project VM
     limaCleanup(vmName);
-    // Clean up any cache VMs created under the test home (e.g. pi-cache-*)
+    // Clean up any cache VMs created under the test home (e.g. psbx-cache-*)
     const listResult = spawnSync('limactl', ['list', '--format', 'json'], {
       encoding: 'utf-8',
       env: { ...process.env, HOME: tmpHome },
@@ -281,7 +281,7 @@ describe('lifecycle', {
     );
 
     // Verify marker was exfiltrated to the new profile's source dir
-    const profileDir = join(tmpHome, '.pi-sandbox', 'profiles', 'copied-from-vm');
+    const profileDir = join(tmpHome, '.psbx', 'profiles', 'copied-from-vm');
     const markerPath = join(profileDir, 'pi', 'agent', 'marker.txt');
     const badPath = join(profileDir, 'pi', 'agent', 'agent', 'marker.txt');
     assert.ok(existsSync(markerPath), `marker.txt not found at ${markerPath}`);

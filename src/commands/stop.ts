@@ -6,7 +6,7 @@ interface StopOptions {
 }
 
 // ---------------------------------------------------------------------------
-// pi-sandbox stop
+// psbx stop
 //
 // Stops a running VM. The VM state is preserved — use `start` or `enter`
 // to resume it later.

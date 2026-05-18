@@ -1,5 +1,5 @@
 /**
- * `pi-sandbox up` — bring a sandbox to a "ready" state in one command.
+ * `psbx up` — bring a sandbox to a "ready" state in one command.
  *
  * Flow:
  *   1. **create** when no VM exists yet (clone from the profile cache,
@@ -66,7 +66,7 @@ interface CreateVmOptions extends RecreateOptions {
 }
 
 // ---------------------------------------------------------------------------
-// pi-sandbox up
+// psbx up
 // ---------------------------------------------------------------------------
 
 export async function up(options: UpOptions = {}): Promise<void> {
@@ -307,7 +307,7 @@ function detectMismatches({
         const currentHash = hashLimaConfig(profile, projectDir);
         if (currentHash !== registryEntry.limaConfigHash) {
           mismatches.push(
-            'Lima configuration (profile lima.yaml or project .pi-sandbox/lima.yaml) has changed since the VM was created',
+            'Lima configuration (profile lima.yaml or project .psbx/lima.yaml) has changed since the VM was created',
           );
         }
       } catch {
@@ -401,9 +401,7 @@ function createVm({ vmName, profile, projectDir, options, label }: CreateVmOptio
 
   console.log('');
   console.log(`Sandbox '${vmName}' is ready!`);
-  console.log(
-    'Run `pi-sandbox exec` to run a command, or `pi-sandbox up` to enter the default shell.',
-  );
+  console.log('Run `psbx exec` to run a command, or `psbx up` to enter the default shell.');
 }
 
 export { detectMismatches, warnIgnoredLimactlArgs };

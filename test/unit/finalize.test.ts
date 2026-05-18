@@ -45,7 +45,7 @@ describe('profileConfigFinalizerScript', { concurrency: true }, () => {
     });
     assert.ok(script.includes('/mnt/host-config/agent'));
     assert.ok(script.includes('/home/pi/workdir/.agents/sessions'));
-    assert.ok(!script.includes('/tmp/pi-cache-profile'));
+    assert.ok(!script.includes('/tmp/psbx-cache-profile'));
     assert.ok(!script.includes('/Users/alice/project'));
   });
 
@@ -81,7 +81,7 @@ describe('cacheSysprepScript', { concurrency: true }, () => {
     assert.ok(script.includes('mkdir -p /usr/local/sbin'));
     assert.ok(
       script.indexOf('mkdir -p /usr/local/sbin') <
-        script.indexOf('cat >/usr/local/sbin/pi-sandbox-regenerate-ssh-host-keys'),
+        script.indexOf('cat >/usr/local/sbin/psbx-regenerate-ssh-host-keys'),
     );
   });
 

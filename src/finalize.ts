@@ -78,12 +78,12 @@ fi`);
 }
 
 const CLONE_IDENTITY_FINALIZER = `set -eu
-mkdir -p /var/lib/pi-sandbox
-if [ ! -f /var/lib/pi-sandbox/identity-finalized ]; then
+mkdir -p /var/lib/psbx
+if [ ! -f /var/lib/psbx/identity-finalized ]; then
   if command -v ssh-keygen >/dev/null 2>&1; then
     ssh-keygen -A >/dev/null 2>&1 || true
   fi
-  touch /var/lib/pi-sandbox/identity-finalized
+  touch /var/lib/psbx/identity-finalized
 fi
 `;
 
@@ -92,40 +92,40 @@ const CACHE_SYSPREP_VERSION = 3;
 const CACHE_SYSPREP_SCRIPT = `set -eu
 install_regenerator_script() {
   mkdir -p /usr/local/sbin
-  cat >/usr/local/sbin/pi-sandbox-regenerate-ssh-host-keys <<'EOF'
+  cat >/usr/local/sbin/psbx-regenerate-ssh-host-keys <<'EOF'
 #!/bin/sh
 set -eu
 ssh-keygen -A >/dev/null 2>&1
-mkdir -p /var/lib/pi-sandbox
-touch /var/lib/pi-sandbox/ssh-host-keys-ready
+mkdir -p /var/lib/psbx
+touch /var/lib/psbx/ssh-host-keys-ready
 EOF
-  chmod 755 /usr/local/sbin/pi-sandbox-regenerate-ssh-host-keys
+  chmod 755 /usr/local/sbin/psbx-regenerate-ssh-host-keys
 }
 
 installed_regenerator=0
 if command -v systemctl >/dev/null 2>&1 && command -v ssh-keygen >/dev/null 2>&1 && [ -d /etc/systemd/system ]; then
   install_regenerator_script
-  cat >/etc/systemd/system/pi-sandbox-regenerate-ssh-host-keys.service <<'EOF'
+  cat >/etc/systemd/system/psbx-regenerate-ssh-host-keys.service <<'EOF'
 [Unit]
-Description=Regenerate pi-sandbox clone SSH host keys
+Description=Regenerate psbx clone SSH host keys
 DefaultDependencies=no
 Before=ssh.service sshd.service
-ConditionPathExists=!/var/lib/pi-sandbox/ssh-host-keys-ready
+ConditionPathExists=!/var/lib/psbx/ssh-host-keys-ready
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/sbin/pi-sandbox-regenerate-ssh-host-keys
+ExecStart=/usr/local/sbin/psbx-regenerate-ssh-host-keys
 
 [Install]
 WantedBy=sysinit.target
 EOF
-  systemctl enable pi-sandbox-regenerate-ssh-host-keys.service >/dev/null 2>&1
+  systemctl enable psbx-regenerate-ssh-host-keys.service >/dev/null 2>&1
   installed_regenerator=1
 elif command -v rc-update >/dev/null 2>&1 && command -v ssh-keygen >/dev/null 2>&1 && [ -d /etc/init.d ] && [ -x /sbin/openrc-run ]; then
   install_regenerator_script
-  cat >/etc/init.d/pi-sandbox-regenerate-ssh-host-keys <<'EOF'
+  cat >/etc/init.d/psbx-regenerate-ssh-host-keys <<'EOF'
 #!/sbin/openrc-run
-description="Regenerate pi-sandbox clone SSH host keys"
+description="Regenerate psbx clone SSH host keys"
 
 depend() {
   need localmount
@@ -133,23 +133,23 @@ depend() {
 }
 
 start() {
-  if [ -f /var/lib/pi-sandbox/ssh-host-keys-ready ]; then
+  if [ -f /var/lib/psbx/ssh-host-keys-ready ]; then
     return 0
   fi
-  ebegin "Regenerating pi-sandbox clone SSH host keys"
-  /usr/local/sbin/pi-sandbox-regenerate-ssh-host-keys
+  ebegin "Regenerating psbx clone SSH host keys"
+  /usr/local/sbin/psbx-regenerate-ssh-host-keys
   eend $?
 }
 EOF
-  chmod 755 /etc/init.d/pi-sandbox-regenerate-ssh-host-keys
-  rc-update add pi-sandbox-regenerate-ssh-host-keys boot >/dev/null 2>&1 || rc-update add pi-sandbox-regenerate-ssh-host-keys default >/dev/null 2>&1
+  chmod 755 /etc/init.d/psbx-regenerate-ssh-host-keys
+  rc-update add psbx-regenerate-ssh-host-keys boot >/dev/null 2>&1 || rc-update add psbx-regenerate-ssh-host-keys default >/dev/null 2>&1
   installed_regenerator=1
 fi
 if [ "$installed_regenerator" != "1" ]; then
-  echo "pi-sandbox: unsupported guest init system for clone SSH host key regeneration" >&2
+  echo "psbx: unsupported guest init system for clone SSH host key regeneration" >&2
   exit 1
 fi
-rm -f /var/lib/pi-sandbox/ssh-host-keys-ready /var/lib/pi-sandbox/identity-finalized
+rm -f /var/lib/psbx/ssh-host-keys-ready /var/lib/psbx/identity-finalized
 rm -f /etc/ssh/ssh_host_*
 if [ -f /etc/machine-id ]; then
   : > /etc/machine-id

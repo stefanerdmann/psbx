@@ -1,5 +1,5 @@
 /**
- * `pi-sandbox exec` — run a one-off command (or open a plain shell) inside
+ * `psbx exec` — run a one-off command (or open a plain shell) inside
  * an existing project sandbox.  Resolves the bound profile live so changes
  * to `shellEnvAllowlist` / `defaultCmd` take effect immediately, without a
  * VM recreate.  If the profile has been deleted or renamed, exec degrades
@@ -21,7 +21,7 @@ interface ExecOptions {
 export async function exec(command: string[] = [], options: ExecOptions = {}): Promise<void> {
   try {
     const vmName = getVmName();
-    const status = assertVmExists(vmName, { extraHint: 'Create it first with `pi-sandbox up`.' });
+    const status = assertVmExists(vmName, { extraHint: 'Create it first with `psbx up`.' });
 
     if (status !== 'Running') {
       console.log(`Starting sandbox '${vmName}'...`);
@@ -31,7 +31,7 @@ export async function exec(command: string[] = [], options: ExecOptions = {}): P
     }
 
     // shellEnvAllowlist is read live from the profile so profile edits take
-    // effect on the next `pi-sandbox exec` without recreate or restart. If
+    // effect on the next `psbx exec` without recreate or restart. If
     // the profile is missing (deleted/renamed), fall back to passing no env
     // vars so the user can still get a shell to recover state.
     const entry = getRegistryEntry(vmName);

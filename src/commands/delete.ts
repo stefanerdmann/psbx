@@ -8,7 +8,7 @@ interface DeleteOptions {
 }
 
 // ---------------------------------------------------------------------------
-// pi-sandbox delete [vm-name]
+// psbx delete [vm-name]
 //
 // Deletes the VM for the current project (or a named VM). Prompts for
 // confirmation first. If the VM is running, it's stopped before deletion.

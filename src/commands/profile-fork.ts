@@ -1,5 +1,5 @@
 /**
- * `pi-sandbox profile fork <new-profile>` — snapshot the running project
+ * `psbx profile fork <new-profile>` — snapshot the running project
  * VM's profile (plus exfiltrated guest config from each configMount) into
  * a brand-new profile, then rebase the current VM onto that profile.
  *
@@ -79,14 +79,14 @@ export { exfiltrateConfigMounts };
 export async function profileFork(newProfileName: string | undefined): Promise<void> {
   try {
     if (!newProfileName) {
-      throw new Error('New profile name is required. Usage: pi-sandbox profile fork <new-profile>');
+      throw new Error('New profile name is required. Usage: psbx profile fork <new-profile>');
     }
 
     const vmName = getVmName();
     const entry = getRegistryEntry(vmName);
     if (!entry) {
       throw new Error(
-        `No registry entry for sandbox '${vmName}'. Run \`pi-sandbox up\` to create it first.`,
+        `No registry entry for sandbox '${vmName}'. Run \`psbx up\` to create it first.`,
       );
     }
     if (!entry.profile) {
@@ -99,7 +99,7 @@ export async function profileFork(newProfileName: string | undefined): Promise<v
     }
     if (status !== 'Running') {
       throw new Error(
-        `Sandbox '${vmName}' must be running to fork its profile (current status: ${status}). Start it with \`pi-sandbox up\` first.`,
+        `Sandbox '${vmName}' must be running to fork its profile (current status: ${status}). Start it with \`psbx up\` first.`,
       );
     }
 
@@ -116,7 +116,7 @@ export async function profileFork(newProfileName: string | undefined): Promise<v
 
     // Stage the new profile so a mid-flight failure leaves no half-built
     // profile behind.
-    const stagingDir = mkdtempSync(join(tmpdir(), `pi-sandbox-fork-${newProfileName}-`));
+    const stagingDir = mkdtempSync(join(tmpdir(), `psbx-fork-${newProfileName}-`));
     rmSync(stagingDir, { recursive: true, force: true });
 
     try {

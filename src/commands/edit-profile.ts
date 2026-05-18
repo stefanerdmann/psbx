@@ -9,7 +9,7 @@ interface EditProfileOptions {
 }
 
 // ---------------------------------------------------------------------------
-// pi-sandbox profile edit [profile] [--file <file>]
+// psbx profile edit [profile] [--file <file>]
 //
 // Opens the profile directory (or a specific file) in $EDITOR.
 // ---------------------------------------------------------------------------
@@ -30,7 +30,7 @@ export async function editProfile(
     if (!name) {
       throw new Error(
         'No profile specified and no default profile configured.\n' +
-          'Usage: pi-sandbox profile edit <name>',
+          'Usage: psbx profile edit <name>',
       );
     }
 
@@ -39,7 +39,7 @@ export async function editProfile(
 
     if (!existsSync(profileDir)) {
       throw new Error(
-        `Profile "${name}" not found at ${profileDir}. Run \`pi-sandbox profile init ${name}\` first.`,
+        `Profile "${name}" not found at ${profileDir}. Run \`psbx profile init ${name}\` first.`,
       );
     }
 

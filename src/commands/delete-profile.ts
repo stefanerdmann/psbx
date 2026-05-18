@@ -1,6 +1,6 @@
 /**
- * `pi-sandbox profile delete <name> [--all]` — remove a profile directory
- * from `~/.pi-sandbox/profiles/`.
+ * `psbx profile delete <name> [--all]` — remove a profile directory
+ * from `~/.psbx/profiles/`.
  *
  * Profile caches are content-addressed (and may be shared after
  * `profile fork`), so after deleting a profile we always sweep orphaned
@@ -66,7 +66,7 @@ export async function deleteProfile(
 
     if (!profileName) {
       throw new Error(
-        'Profile name is required. Usage: pi-sandbox profile delete <name>\n' +
+        'Profile name is required. Usage: psbx profile delete <name>\n' +
           'Use --all to delete all profiles.',
       );
     }

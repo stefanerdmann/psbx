@@ -48,14 +48,14 @@ import type { Profile, ProfileCacheInputs } from './types.ts';
 type CreateProfileCacheParams = ProfileCacheInputs & { profile: Profile };
 
 function cacheNameFor(cacheKey: string): string {
-  return `pi-cache-${cacheKey.slice(0, 12)}`;
+  return `psbx-cache-${cacheKey.slice(0, 12)}`;
 }
 
 function profileCacheInputs(profile: Profile, projectDir: string): ProfileCacheInputs {
   const config = buildCacheLimaConfig(profile, projectDir);
   const limaVersionValue = limaVersion();
   const cacheKey = hashRenderedLimaConfig(config, {
-    kind: 'pi-sandbox-profile-cache',
+    kind: 'psbx-profile-cache',
     cacheSchemaVersion: 1,
     limaVersion: limaVersionValue,
     sysprepVersion: CACHE_SYSPREP_VERSION,
@@ -77,7 +77,7 @@ function createProfileCache({
   sysprepVersion,
   yaml,
 }: CreateProfileCacheParams): void {
-  const tmpDir = mkdtempSync(join(tmpdir(), 'pi-sandbox-cache-'));
+  const tmpDir = mkdtempSync(join(tmpdir(), 'psbx-cache-'));
   const tmpPath = join(tmpDir, 'lima.yaml');
   writeFileSync(tmpPath, yaml, 'utf-8');
 
@@ -106,7 +106,7 @@ function createProfileCache({
       console.warn(
         `Warning: Profile cache '${cacheName}' failed to provision and was kept for inspection.`,
       );
-      console.warn(`Hint: run \`pi-sandbox logs\` to view its provisioning output.`);
+      console.warn(`Hint: run \`psbx logs\` to view its provisioning output.`);
     }
     throw err;
   } finally {

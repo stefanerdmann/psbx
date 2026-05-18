@@ -18,10 +18,10 @@ interface VmRow {
 }
 
 // ---------------------------------------------------------------------------
-// pi-sandbox list
+// psbx list
 //
-// Lists all pi-sandbox VMs with their current status and project directory.
-// Reads the VM registry to know which VMs belong to pi-sandbox (vs other
+// Lists all psbx VMs with their current status and project directory.
+// Reads the VM registry to know which VMs belong to psbx (vs other
 // Lima VMs). Checks live status for each registered VM.
 //
 // --prune  Remove stale entries (VM gone AND project dir missing).
