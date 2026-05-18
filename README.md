@@ -1,211 +1,238 @@
 # pi-sandbox
 
-A CLI tool that manages per-project [Lima](https://lima-vm.io) VMs for sandboxing the [pi coding agent](https://github.com/mariozechner/pi-coding-agent) on macOS ARM. Each project gets its own isolated VM with the pi agent pre-installed, your project files mounted in, and environment-specific configuration (corporate certs, auth tokens, MCP servers) handled automatically.
+A thin wrapper to manage a development VM per project. Mainly focused on running agents like the [pi coding agent](https://pi.dev/) in a storage-isolated environment. pi-sandbox gives each project its own [Lima](https://lima-vm.io) VM with your agent configuration, API tokens, and project files ready to go, while keeping the host system clean and preventing cross-project interference.
+
+**Key benefits:**
+
+- **Isolation** — each project runs in its own VM; agent activity cannot affect the host or other projects.
+- **Reproducibility** — profiles capture the full environment (OS, packages, agent config) so you can recreate identical sandboxes at will.
+- **Simplicity** — a single `pi-sandbox up` command creates, starts, and enters the sandbox.
 
 ## Prerequisites
 
 | Requirement | Install | Why |
 |---|---|---|
-| **macOS ARM** (Apple Silicon) | — | Uses Lima with Apple Virtualization framework (VZ) |
-| **Lima** | `brew install lima` | Manages the lightweight Linux VMs |
-| **Node.js ≥ 20** | `brew install node` | Runtime for pi-sandbox and the pi agent |
-| **Pi auth tokens** | `auth.json` from your pi agent setup | Authenticates the pi agent inside the VM |
-
-**Corporate environments only:**
-- A CA certificate bundle file (`.pem`) for your corporate proxy
+| **Lima** | `brew install lima` | Manages the Linux VMs |
+| **Node.js ≥ 26** | `brew install node` | Runs the pi-sandbox CLI (uses built-in TypeScript support) |
 
 ## Install
 
+pi-sandbox is not published on npm. Clone the repository and install from the
+checkout:
+
 ```bash
+git clone https://github.com/stefanerdmann/pi-sandbox.git
+cd pi-sandbox
+npm install        # installs dependencies and compiles TypeScript → dist/
 npm install -g .
 ```
 
-## Quick Start
+On Linux, the global install step may require `sudo`.
 
-### 1. Initialize configuration
+## Quick start
 
+This quick start uses [pi coding agent](https://pi.dev/). See [Concepts](#concepts) for other agent templates and customization.
+
+First create a profile:
 ```bash
-pi-sandbox init
+pi-sandbox profile init <profile-name>
 ```
+If you have a pi configured on the host `~/.pi/agent/.`, you can optionally add the flags
+`--copy-from-host` or `--symlink-from-host`.
 
-This creates `~/.pi-sandbox/config.json` with sensible defaults and prints guidance on what to edit.
-
-### 2. Configure for your environment
-
-Edit `~/.pi-sandbox/config.json`:
-
-```json
-{
-  "activeProfile": "default",
-  "profiles": {
-    "default": {
-      "cert": null,
-      "pi": { "configDir": "~/.pi-sandbox" },
-      "mcp": { "envPassthrough": [] },
-      "vm": { "cpus": 4, "memory": "8GiB", "disk": "50GiB" }
-    }
-  }
-}
+Then launch a sandbox from any project directory:
 ```
-
-**Corporate setup** — set the certificate path and MCP tokens:
-```json
-{
-  "activeProfile": "corporate",
-  "profiles": {
-    "corporate": {
-      "cert": { "hostBundlePath": "~/certs/corporate-ca.pem" },
-      "mcp": { "envPassthrough": ["GHE_MCP_TOKEN", "GITHUB_MCP_TOKEN"] },
-      "vm": { "cpus": 4, "memory": "8GiB", "disk": "50GiB" }
-    }
-  }
-}
-```
-
-### 3. Copy pi agent files
-
-Copy your pi agent configuration files to the config directory:
-
-```bash
-cp ~/.pi/agent/auth.json ~/.pi-sandbox/auth.json        # Required
-cp ~/.pi/agent/settings.json ~/.pi-sandbox/settings.json  # Optional
-cp ~/.pi/agent/mcp.json ~/.pi-sandbox/mcp.json            # Optional
-```
-
-### 4. Create a sandbox
-
-```bash
 cd ~/projects/my-project
-pi-sandbox create
+pi-sandbox up
 ```
+You land in `~/workdir` inside the VM, which is your host project directory mounted read-write.
+The pi coding agent starts automatically.
 
-This provisions a Lima VM with:
-- Your project directory mounted at `/app` (writable)
-- Pi agent installed and configured
-- Auth tokens, settings, and MCP config from your host
-- Corporate certificate injected (if configured)
+## Concepts
 
-### 5. Start working
+pi-sandbox uses a profile-centered configuration hierarchy:
+
+1. **Profile templates** (shipped) — read-only blueprints bundled with pi-sandbox
+2. **Profiles** (user) — customizable copies under `~/.pi-sandbox/profiles/` and the source of truth for Lima and env settings
+3. **Registry metadata** (per-VM) — project/profile binding and hashes in `config.json`
+
+You start from one of the shipped profiles that can be selected during `pi-sandbox profile init --template ...`
+
+- `pi-in-ubuntu`: default; used in the quick-start, or
+- `copilot-in-ubuntu` geared towards usage of GitHub Copilot CLI instead of pi.
+
+For details, see [Pi agent configuration](docs/CONFIG.md#pi-agent-configuration) and [GitHub Copilot CLI configuration](docs/CONFIG.md#github-copilot-cli-configuration) in the Configuration Reference.
+
+After initialization, you should `pi-sandbox profile edit <profile-name>` to adapt
+the profile to your needs. This profile then defines the common configuration as many
+project-specific VMs you like to create. You can create multiple independent profiles
+to serve different kinds of use-cases.
+
+Changes to a profile trigger VM recreation on next `pi-sandbox up` for projects using
+that profile (as detected by comparison to the registry metadata).
+
+See [docs/CONCEPTS.md](docs/CONCEPTS.md) for a detailed explanation with
+diagrams and typical workflows.
+
+## Common Profile Customizations
+
+See [docs/CONFIG.md](docs/CONFIG.md) for a detailed explanation of the provided
+configuration options. Here, we list two typical customizations. Edit Lima settings with
 
 ```bash
-pi-sandbox enter
+pi-sandbox profile edit <profile-name> [--file lima|env]
 ```
 
-You're now inside the VM at `/app` with the pi agent ready to use. Your MCP tokens are available. Run `pi` to start a session.
+### How do I pass through environment variables?
+
+Profiles declare host environment variables to pass into the sandbox shell via the `shellEnvAllowlist` key in `env.yaml`, e.g.:
+
+```yaml
+shellEnvAllowlist:
+  - GHE_MCP_TOKEN
+  - GITHUB_MCP_TOKEN
+```
+
+`pi-sandbox up` and `pi-sandbox exec` read this allowlist from the registered profile.
+
+### How can I use a host CA certificate?
+
+This is commonly needed in corporate environments where HTTPS traffic is re-signed by an internal CA.
+You can inject a host CA certificates into the VM with Lima-native `caCerts.files` in the profile `lima.yaml`:
+
+```yaml
+caCerts:
+  files:
+    - "~/path/to/my-corporate-ca.pem"
+```
+
+### Where are my profiles stored?
+
+All state, including profile configuration, lives under `~/.pi-sandbox` by default.
+You and set `PI_SANDBOX_HOME` to use a different location, e.g.:
+
+```bash
+export PI_SANDBOX_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/pi-sandbox"
+```
+
+## Lima configuration precedence
+
+VM creation merges Lima settings from the profile, an optional project-level
+override (`<project>/.pi-sandbox/lima.yaml`, limited to `cpus`/`memory`/`disk`),
+and any extra `pi-sandbox up -- <args>` passed to `limactl start`.
+See [docs/CONFIG.md — Configuration precedence](docs/CONFIG.md#configuration-precedence)
+for the full resolution order and examples.
+
+## Profile VM cache
+
+`up` uses a transparent Lima clone-backed cache for normal VM creation. On the
+first create for a profile/cache key, pi-sandbox prepares a hidden stopped Lima
+instance named like `pi-cache-<cacheKey[0..12]>`. Later project VMs using the same
+effective cache key are created with `limactl clone`, then finalized for the
+current project.
+
+The cache key is derived from the rendered cache Lima YAML and includes
+cache-safe VM-shaping inputs: profile `lima.yaml`, project
+`cpus`/`memory`/`disk` overrides, referenced provisioning script contents, Lima
+version, and configured CA certificate file contents. It intentionally excludes
+project paths, profile config directory contents, `defaultCmd`,
+`shellEnvAllowlist`, and current host environment values. Two profiles with
+identical cache Lima config share one cache. New VMs receive current profile
+config during finalization; existing VMs re-run finalization in place when
+copied profile config content changes.
+
+Opaque extra arguments after `--` bypass the cache because pi-sandbox cannot know
+which creation-time state they affect.
+
+Inspect and manage caches with:
+
+```bash
+pi-sandbox cache list              # alias: cache ls
+pi-sandbox cache status            # hit/miss for this project/profile cache key
+pi-sandbox cache delete            # delete this project's matching cache
+pi-sandbox cache delete --all      # delete every registered cache
+```
+
+`cache status` and `cache delete` use the current project's registered profile
+when one exists, otherwise the default profile. Pass `--profile <name>` to check
+or delete the cache key for a specific profile.
 
 ## Commands
 
-| Command | Description | Flags |
+| Command | Description | Key options |
 |---|---|---|
-| `pi-sandbox init` | Create config file with defaults | — |
-| `pi-sandbox create` | Provision a new VM for current project | `--profile <name>` |
-| `pi-sandbox enter` | Enter VM shell (auto-starts if stopped) | `--profile <name>` |
-| `pi-sandbox start` | Start a stopped VM | `--profile <name>` |
-| `pi-sandbox stop` | Stop a running VM | `--profile <name>` |
-| `pi-sandbox delete` | Delete VM (prompts for confirmation) | `--profile <name>` |
-| `pi-sandbox recreate` | Delete + create (applies config changes) | `--profile <name>` |
-| `pi-sandbox status` | Show VM status for current project | — |
-| `pi-sandbox list` | List all pi-sandbox VMs | — |
-| `pi-sandbox logs` | Show VM provisioning logs | — |
+| `pi-sandbox up` | Bring sandbox up: create, start, and enter in one step | `--profile <name>`, `--shell`, `--only-create`, `--only-recreate`, `--only-start`, `--force-recreate` |
+| `pi-sandbox exec [-- cmd...]` | Run a one-off command in the sandbox (auto-starts if stopped) | `--shell` |
+| `pi-sandbox profile init <profile>` | Create a new profile from a shipped profile template or existing profile | `--template <name>` (pi-in-ubuntu, self-test, copilot-in-ubuntu), `--from-profile <name>`, `--self-test`, `--copy-from-host`, `--symlink-from-host`, `--set-as-default` |
+| `pi-sandbox stop` | Stop the VM | `-f, --force` |
+| `pi-sandbox restart` | Stop and then start the VM | `-f, --force` |
+| `pi-sandbox delete [vm-name]` | Delete a VM (defaults to current project) | `-f, --force`, `--all-registered` |
+| `pi-sandbox cache list` | List caches (alias: `cache ls`) | |
+| `pi-sandbox cache status` | Show whether the current project/profile has a matching cache | `--profile <name>` |
+| `pi-sandbox cache delete` | Delete the current project/profile matching cache | `--profile <name>`, `-f, --force`, `--all` |
+| `pi-sandbox profile delete [name]` | Delete a profile (warns if in use) | `-f, --force`, `--all` |
+| `pi-sandbox profile list` | List all profiles (alias: `profile ls`) | |
+| `pi-sandbox profile set-default <name>` | Set the default profile | |
+| `pi-sandbox profile edit [profile]` | Open a profile in `$EDITOR` | `--file <file>` (lima, env, or relative path) |
+| `pi-sandbox profile fork <new-profile>` | Snapshot the running current-project VM profile and guest config into a new profile, then rebase the VM to it without restart/recreate | |
+| `pi-sandbox status` | Show current project VM status, environment, and sync state | |
+| `pi-sandbox list` | List registered VMs (alias: `ls`) | |
+| `pi-sandbox logs` | Show cloud-init logs for the project and its cache VM (failed cache VMs are kept for inspection) | |
+| `pi-sandbox completion [shell]` | Generate shell completion scripts (bash, zsh, fish) | |
 
-## Common Workflows
+Global option: `-y, --yes` skips confirmation prompts.
 
-### Switch between profiles
+## Project hygiene
+
+Running `pi-sandbox up` creates a `.agents/` directory (and optionally
+`.pi-sandbox/lima.yaml`) in the project root. Consider adding these to your
+`.gitignore`:
+
+```gitignore
+.agents/
+.pi-sandbox/
+```
+
+## Development
+
+The source is TypeScript. Node.js ≥ 26 has built-in type stripping, so you can run `.ts` files directly during development — no compilation step needed in the dev loop.
 
 ```bash
-# Use corporate profile for this project
-pi-sandbox create --profile corporate
-
-# Or set the default in config
-# "activeProfile": "corporate"
+node bin/pi-sandbox.ts --help        # run directly from source
+npm run typecheck                     # type-check without emitting
+npm run build                         # compile to dist/ (for publish/install)
 ```
 
-### Apply config changes
+### Testing
 
-VM configuration is baked in at creation time. To apply changes:
+pi-sandbox uses Node.js built-in test runner (`node --test`). Tests are split into two suites:
+
+| Script | What it tests | Requirements |
+|---|---|---|
+| `npm run test:fast` | Static behaviour — CLI flags, profile init, error paths | Node.js only; no VM or Lima needed |
+| `npm run test:slow` | Full VM lifecycle — create, start, shell, stop, delete | Lima installed and working |
+| `npm test` | Both suites | Lima installed and working |
+
+Run during development:
 
 ```bash
-pi-sandbox recreate
+npm run test:fast        # seconds — safe to run anywhere
+npm run test:slow        # minutes — creates and destroys real VMs
 ```
 
-This deletes the VM and creates a fresh one. **Session data is preserved** — it lives in your project directory at `.pi-sandbox/sessions/`, not inside the VM.
+The lifecycle tests use a self-test profile. This is a lightweight Alpine-based VM configuration, using 2 CPUs, 512 MiB memory, and a small disk. It installs QEMU and Lima inside the guest for nested testing scenarios.
 
-### Project-level overrides
-
-Create `.pi-sandbox.json` in your project directory to override settings for that project only:
-
-```json
-{
-  "vm": { "cpus": 8, "memory": "16GiB" }
-}
-```
-
-This merges over your user config. Useful for giving resource-intensive projects more power.
-
-### Check what's running
+Create it manually for experimentation:
 
 ```bash
-# Current project
-pi-sandbox status
-
-# All sandboxes
-pi-sandbox list
+pi-sandbox profile init self-test --self-test
 ```
 
-### Debug provisioning failures
+The lifecycle tests create the self-test profile automatically in a temporary home directory, so you do not need to set it up before running `npm run test:slow`.
 
-```bash
-pi-sandbox logs
-```
+## Further reading
 
-Shows the cloud-init output log from inside the VM — useful when `create` fails during provisioning.
-
-## Session Data
-
-Pi session data is stored at `<project-dir>/.pi-sandbox/sessions/`. Consider adding `.pi-sandbox/` to your project's `.gitignore`:
-
-```bash
-echo '.pi-sandbox/' >> .gitignore
-```
-
-## Troubleshooting
-
-### `Error: limactl not found`
-
-Lima is not installed. Install it:
-```bash
-brew install lima
-```
-
-### `Error: auth.json not found`
-
-Copy your pi auth tokens to the config directory:
-```bash
-cp ~/.pi/agent/auth.json ~/.pi-sandbox/auth.json
-```
-
-### `Error: Certificate not found at ...`
-
-The configured certificate path doesn't exist. Check `cert.hostBundlePath` in `~/.pi-sandbox/config.json`. If you don't need corporate certs, set `cert` to `null`.
-
-**Symlink pitfall:** The path must point to the real file, not a symlink. Lima mounts the parent directory, and symlinks don't resolve across mount boundaries. Use `realpath <path>` to find the real path and put that in your config.
-
-### `Warning: Environment variable X not set`
-
-MCP tokens aren't set in your shell. Export them before running pi-sandbox:
-```bash
-export GHE_MCP_TOKEN="your-token"
-export GITHUB_MCP_TOKEN="your-token"
-```
-
-Add these to your `~/.zshrc` to make them persistent.
-
-### VM name collision
-
-Two projects with the same directory name (e.g., both named `app`) will collide. Rename one of the directories.
-
-## Further Reading
-
-- [Configuration Reference](docs/CONFIG.md) — complete config schema
-- [Architecture](docs/ARCHITECTURE.md) — design patterns and rationale
-- [Provisioning](docs/PROVISIONING.md) — what happens inside the VM and why
+- [Configuration Reference](docs/CONFIG.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Provisioning](docs/PROVISIONING.md)
+- [Security](docs/SECURITY.md)

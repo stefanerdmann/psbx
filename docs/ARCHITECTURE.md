@@ -1,341 +1,132 @@
 # Architecture
 
-This document explains the design patterns in pi-sandbox and the rationale behind each. Read this when you need to understand WHY something is built the way it is, or before making changes to the mount strategy, provisioning, or configuration system.
+See [CONCEPTS.md](CONCEPTS.md) for an overview of the profile-centered
+configuration hierarchy (profile template → profile → per-VM registry metadata).
 
-## Component Overview
+## Components
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     CLI Layer                                │
-│  bin/pi-sandbox.js                                           │
-│  Commander.js routes commands → handler functions            │
-│  --profile flag on lifecycle commands                        │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-┌──────────────────────────▼──────────────────────────────────┐
-│                   Command Handlers                           │
-│  src/commands/{create,enter,start,stop,delete,recreate,      │
-│               status,list,logs,init}.js                      │
-│  Orchestrate: config → validate → lima → template            │
-└───────┬──────────┬───────────┬──────────┬───────────────────┘
-        │          │           │          │
-┌───────▼───┐ ┌───▼──────┐ ┌──▼─────┐ ┌──▼─────────┐
-│  Config   │ │ Validate │ │  Lima  │ │  Template  │
-│           │ │          │ │        │ │  Builder   │
-│ Load      │ │ Check    │ │ Wrap   │ │ Build Lima │
-│ Merge     │ │ paths,   │ │ lima-  │ │ YAML from  │
-│ Resolve   │ │ deps,    │ │ ctl    │ │ JS objects │
-│ profiles  │ │ env vars │ │ calls  │ │ + config   │
-└───────────┘ └──────────┘ └────────┘ └────────────┘
-```
-
-Each module has a single responsibility:
-- **config.js** — Load config, merge defaults, resolve profiles, derive VM names
-- **validate.js** — Check that a profile's paths and dependencies exist before VM creation
-- **lima.js** — Thin wrapper around `limactl` subprocess calls with error handling
-- **template.js** — Render Handlebars templates into Lima YAML from a resolved profile
-- **registry.js** — Track which VMs belong to pi-sandbox (for `list` command)
-
-## YAML Generation: Handlebars Templates
-
-### Problem
-
-The original prototype used a YAML template with `${VAR}` placeholders, processed by `envsubst`. This had no support for conditionals — the cert mount was always present even without a cert, causing Lima errors. Missing env vars produced invalid YAML.
-
-### Solution
-
-Three Handlebars template files that look like real YAML/shell with minimal template syntax:
-
-```
-templates/
-  lima.yaml.hbs              # Lima VM config — mounts, resources, images
-  provision-system.sh.hbs    # Root provisioning script
-  provision-user.sh.hbs      # User provisioning script
-```
-
-`src/template.js` reads these templates, renders them with Handlebars using values from the resolved config profile, and returns the final Lima YAML string.
-
-### Rendering flow
-
-```
-1. Render provision-system.sh.hbs  → system provisioning script string
-2. Render provision-user.sh.hbs   → user provisioning script string
-3. Indent both scripts (6 spaces for YAML block scalar embedding)
-4. Render lima.yaml.hbs           → final Lima YAML (receives scripts as context)
-```
-
-### Why Handlebars
-
-- **Readable:** Templates look like the actual Lima YAML / shell scripts. Open `templates/lima.yaml.hbs` and you immediately see the VM configuration.
-- **Conditionals:** `{{#if cert}}...{{/if}}` handles optional cert mounts and provisioning blocks cleanly.
-- **No arbitrary code:** Unlike EJS, Handlebars doesn't allow arbitrary JavaScript in templates. The template is declarative — logic stays in template.js.
-- **Standard:** Handlebars is the most widely used template engine for this pattern. Well-documented, stable.
-
-### Template syntax used
-
-| Syntax | Purpose | Example |
-|---|---|---|
-| `{{variable}}` | Value substitution | `cpus: {{vm.cpus}}` |
-| `{{#if x}}...{{/if}}` | Conditional block | Cert mount, cert provisioning |
-| `{{{triple}}}` | Raw output (no escaping) | Embedded provisioning scripts |
-
-### What breaks if changed
-
-- Removing the templates and going back to JS string building makes the Lima config opaque again — you'd need to read JavaScript to understand what the VM gets.
-- The `envsubst` approach from the original prototype lacks conditionals and produces invalid YAML on missing variables.
-- EJS would work but mixes JavaScript logic into templates, reducing readability.
-
-## Mount Strategy
-
-### Problem
-
-The VM needs access to host files (project code, pi config, certificates) but shouldn't be able to modify host configuration arbitrarily. Different files need different access levels.
-
-### Solution
-
-Three mounts with explicit access control (plus a conditional fourth):
-
-```
-HOST                                    GUEST               ACCESS
-─────────────────────────────────────────────────────────────────────
-~/.pi-sandbox/                    →     /mnt/pi-host-config  Read-only
-<project-dir>/                    →     /app                 Read-write
-<cert-dir>/  (if cert configured) →     /mnt/host-cert-dir   Read-only
-```
-
-### Host directory layout
-
-```
-~/.pi-sandbox/
-├── config.json          # Tool config (profiles, VM settings)
-├── auth.json            # Pi auth tokens (copied to guest)
-├── settings.json        # Pi settings (copied + patched in guest)
-├── mcp.json             # MCP server config (copied to guest)
-└── vms.json             # VM registry (name → project dir)
-```
-
-### Guest directory layout
-
-```
-/app/                         # Project files (host project dir, writable)
-├── .pi-sandbox/
-│   └── sessions/             # Pi session data (persists on host)
-/mnt/pi-host-config/          # Host pi config (read-only mount)
-├── auth.json
-├── settings.json
-├── mcp.json
-/mnt/host-cert-dir/           # Host cert dir (read-only, conditional)
-├── corporate-ca.pem
-~/.pi/agent/                  # Assembled pi config (built during provisioning)
-├── auth.json                 # Copied from mount (writable for token refresh)
-├── settings.json             # Copied + patched from mount (sessionDir changed)
-├── mcp.json                  # Copied from mount
-~/.npm-global/                # User-space npm prefix
-├── bin/                      # Global npm binaries on PATH
-```
-
-### Why pi config is read-only
-
-If the mount were writable, the pi agent could modify host files during operation. Multiple VMs sharing the same host directory could corrupt each other's settings. The read-only mount enforces the host as the single source of truth — files are copied into the VM during provisioning with explicit handling for each.
-
-### Why project dir is writable
-
-The project directory is the developer's workspace. Code changes, session data, and generated files must persist on the host. The writable mount makes the VM transparent — files modified inside the VM appear on the host immediately.
-
-### What breaks if changed
-
-- Making pi config writable → auth token refresh in VM writes to host → multiple VMs corrupt `auth.json`
-- Making project read-only → can't create session directory, can't write code, agent is useless
-- Removing the cert mount → corporate proxy blocks all HTTPS in the VM
-
-## Auth Quarantine Pattern
-
-### Problem
-
-The pi agent needs three configuration files (`auth.json`, `settings.json`, `mcp.json`), but each has different access requirements:
-
-| File | Pi agent needs... | Problem if symlinked from host |
-|---|---|---|
-| `auth.json` | Read + **Write** (token refresh) | Writes go to host; multiple VMs race on the same file |
-| `settings.json` | Read only, but needs **modification** (sessionDir) | Can't modify a symlink to a read-only mount |
-| `mcp.json` | Read only | No problem, but we copy for consistency |
-
-### Solution: Copy everything, with file-specific handling
-
-During user provisioning:
-
-1. **`settings.json`** — Copy from mount, patch `sessionDir` to `/app/.pi-sandbox/sessions`, write to `~/.pi/agent/settings.json`. Uses an inline `node -e` script to parse JSON, modify the field, and write it back.
-
-2. **`auth.json`** — Copy from mount to `~/.pi/agent/auth.json`, `chmod 600`. The pi agent can now refresh tokens freely without affecting the host file or other VMs.
-
-3. **`mcp.json`** — Copy from mount if present. Simple file copy.
-
-### Why not symlink auth.json
-
-The pi agent refreshes authentication tokens during operation. If `auth.json` were a symlink to the host file:
-- Token refresh would write through the symlink to the host's master copy
-- Two VMs running simultaneously would race on token refresh
-- A corrupted token could break all VMs at once
-
-Copying decouples each VM's authentication lifecycle from the host and from other VMs.
-
-### Why patch settings.json instead of symlinking
-
-The host's `settings.json` has `sessionDir` pointing to a host-relevant path (or the original `/pi/data/sessions`). Inside the VM, sessions must go to `/app/.pi-sandbox/sessions` so they persist in the project directory. We can't symlink because:
-1. The mount is read-only — can't modify the file (pi needs to lock settings.json)
-2. We need to change `sessionDir` — can't do that with a symlink
-
-The copy+patch approach reads the host's settings, changes one field, and writes it to the VM's config directory.
-
-### What breaks if changed
-
-- Symlink auth.json → token refresh corrupts host file, multi-VM race condition
-- Symlink settings.json → can't patch sessionDir, sessions stored in wrong location
-- Skip mcp.json → no MCP servers available in the VM
-
-## Certificate Injection
-
-### Problem
-
-Corporate proxies intercept HTTPS traffic and re-sign it with a corporate CA certificate. Every tool that makes HTTPS requests must trust this corporate CA, or connections fail with certificate errors. Different tools use different cert stores:
-
-| Tool | Certificate source |
+| Module | Responsibility |
 |---|---|
-| apt, curl, git, wget | System trust store (`/etc/ssl/certs/`) |
-| Node.js, npm | `NODE_EXTRA_CA_CERTS` env var (or built-in Mozilla certs) |
+| `bin/pi-sandbox.js` | Defines CLI commands and the limited profile-aware command surface. |
+| `src/config.js` | Loads global config, resolves profile directories, parses `env.yaml`, and derives VM names. |
+| `src/template.js` | Parses profile and project Lima YAML, deep-merges safe overrides, resolves provisioning file paths, adds dynamic mounts (project workdir + each profile config subfolder), and serializes the final Lima config. |
+| `src/cache.js` | Builds/reuses hidden clone source VMs for effective profile cache keys and creates project VMs with `limactl clone`. |
+| `src/commands/cache.js` | Lists profile cache VMs and deletes either the current project's matching cache or all registered caches. |
+| `src/finalize.js` | Runs lightweight per-project finalization after clone/start: config copy, session directory setup, Copilot session symlink, and clone identity cleanup. |
+| `src/validate.js` | Checks Lima availability, profile files, project override allowlist, and environment variable names. |
+| `src/lima.js` | Wraps `limactl` subprocess calls. |
+| `src/registry.js` | Stores VM and profile-cache metadata needed by commands that do not accept profile options. |
 
-### Solution: Two-layer approach
+## Profile source of truth
 
-**System provisioning (as root):**
-1. Copy the corporate CA cert to `/usr/local/share/ca-certificates/host-cert.crt`
-2. Run `update-ca-certificates` to add it to the system trust store
+Profiles are directories under `~/.pi-sandbox/profiles`. The directory name is the profile name. The profile owns:
 
-This covers apt, curl, git, and any other tool that uses the system cert store.
+1. Lima configuration in `lima.yaml`
+2. Environment passthrough and config-mount declarations in `env.yaml`
+3. Host-config subfolders referenced by `env.yaml#configMounts` (e.g., `pi/agent`, `copilot`)
 
-**User provisioning (as pi user):**
-1. Add `export NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt` to `.bashrc`
+`config.json` stores the default profile plus per-VM and cache metadata; profile files remain the source of truth for Lima and env settings. The pi-sandbox state directory defaults to `~/.pi-sandbox` and can be overridden with the `PI_SANDBOX_HOME` environment variable.
 
-This tells Node.js to use the system cert bundle (which now includes the corporate CA) instead of its built-in Mozilla certs.
+## YAML generation
 
-### Why BOTH are needed
+pi-sandbox does not interpolate YAML text. For project VMs it:
 
-- **Without system certs:** `apt-get update` fails (can't verify package repository certs), `git clone` over HTTPS fails, `curl` fails. The VM can't install packages.
-- **Without NODE_EXTRA_CA_CERTS:** `npm install` fails, the pi agent can't download packages or communicate with model providers. Node.js ignores the system cert store by default.
+1. Parses the profile `lima.yaml`.
+2. Parses `<project>/.pi-sandbox/lima.yaml` if it exists.
+3. Rejects project YAML keys except `cpus`, `memory`, and `disk`.
+4. Deep-merges the project YAML over the profile YAML.
+5. Resolves relative `provision[].file` paths against the profile directory.
+6. Adds the project mount at `~/workdir`.
+7. Adds one read-only mount per `env.yaml#configMounts` entry that exists on disk: `<profileDir>/<source>` → `/mnt/host-config/<name>`.
+8. Serializes the object to a temporary `lima.yaml` in a private temp directory.
 
-### Why it's conditional
+Extra arguments passed to `pi-sandbox up -- ...` are forwarded to `limactl start` after pi-sandbox has generated the YAML, so Lima handles their precedence.
 
-Personal Macs don't have corporate proxies. When `cert` is `null` in the config:
-- No cert directory is mounted
-- No cert copy/update-ca-certificates in system provisioning
-- No `NODE_EXTRA_CA_CERTS` in user provisioning
+For profile cache VMs, pi-sandbox performs steps 1-5 and serializes the result
+without adding project/config dynamic mounts. This keeps project paths and
+profile config directory contents out of the reusable cache.
 
-This keeps personal VMs clean — fewer mount points, faster provisioning, no unnecessary env vars.
+## Profile cache
 
-### What breaks if changed
+Normal VM creation is clone-backed:
 
-- Skip system cert update → apt, git, curl all fail behind corporate proxy
-- Skip NODE_EXTRA_CA_CERTS → npm, pi agent fail behind corporate proxy
-- Make cert conditional logic wrong → corporate VMs missing certs, or personal VMs with unnecessary cert env
+1. Compute a profile cache key from cache-safe inputs: effective profile Lima
+   config, project `cpus`/`memory`/`disk` overrides, provision file contents,
+   Lima version, and CA certificate file contents.
+2. Ensure a stopped hidden cache VM named `pi-cache-<cacheKey[0..12]>` exists.
+3. `limactl clone` the cache VM to the project VM name.
+4. Merge `~/workdir` and `/mnt/host-config/<name>` mounts into the clone's
+   already-expanded instance `lima.yaml`.
+5. Start the clone and run finalization.
 
-## Environment Variable Passthrough
+Cache keys intentionally exclude `defaultCmd`, `shellEnvAllowlist`, current host
+environment values, project paths, and profile config directory contents. Those
+values are runtime or per-project inputs and are read from the profile and
+applied by shell entry/finalization instead. Project VM metadata records a
+separate finalizer hash that does include copied profile config contents, so
+profile config edits re-run finalization in place without rebuilding the
+expensive base or restarting the VM.
 
-### Problem
+When opaque extra `limactl` creation arguments are supplied after `--`,
+pi-sandbox bypasses the cache and creates directly because those arguments may
+affect creation-time state that cannot be safely reconstructed after cloning.
 
-MCP bearer tokens (e.g., `GHE_MCP_TOKEN`, `GITHUB_MCP_TOKEN`) live in the host shell environment and must reach the guest VM. But Lima's default behavior forwards ALL host environment variables to the guest, which:
-- Leaks secrets the VM doesn't need
-- Causes PATH conflicts (host macOS paths vs guest Linux paths)
-- Makes the VM environment unpredictable
+## Mount strategy
 
-### Solution: Blanket block + selective allow
+| Host | Guest | Access | Why |
+|---|---|---|---|
+| Current project directory | `~/workdir` | Read-write | Code changes, project files, and `~/workdir/.agents` must persist. |
+| Each profile config subfolder (`env.yaml#configMounts[].source`) | `/mnt/host-config/<name>` | Read-only | Host profile is the source of truth and should not be mutated by the VM. |
 
-When `pi-sandbox enter` runs, it sets:
+Project finalization copies each `/mnt/host-config/<name>` into the matching guest target (e.g., `~/.pi/agent`, `~/.copilot`). The copy lets agents mutate auth and settings inside the VM without writing back to the host profile.
 
-```bash
-LIMA_SHELLENV_BLOCK=*                              # Block everything
-LIMA_SHELLENV_ALLOW=GHE_MCP_TOKEN, GITHUB_MCP_TOKEN  # Allow only these
+## Environment passthrough
+
+The profile `env.yaml` remains the source of truth. `up` and `exec` resolve the
+registered profile name, read `shellEnvAllowlist` live, and invoke Lima with:
+
+```text
+LIMA_SHELLENV_BLOCK=*
+LIMA_SHELLENV_ALLOW=<comma-separated profile values>
 ```
 
-The allow-list comes from `profile.mcp.envPassthrough` in the config.
+If the registered profile is missing, `exec` still works but forwards no host
+environment variables and prints a warning. This keeps non-profile commands
+deterministic and prevents accidental forwarding of the host environment.
 
-### Why blanket block
+## VM-local and persistent pi data
 
-Without `LIMA_SHELLENV_BLOCK=*`, Lima forwards your entire host environment. This means:
-- `PATH` includes macOS paths like `/opt/homebrew/bin` that don't exist in the Linux guest
-- Secrets like `AWS_SECRET_ACCESS_KEY` or other tokens leak into the VM
-- Environment is different depending on what's set in the host shell — non-reproducible
+`~/.pi/agent` is copied into the VM and is VM-local. `~/workdir/.agents` is inside the writable project mount and persists on the host. Project finalization rewrites `settings.json` to store sessions at `~/workdir/.agents/sessions`.
 
-The blanket block makes the VM environment clean and predictable. Only explicitly allowed variables pass through.
+## Registry
 
-### How the enter command wires it
-
-```js
-// src/lima.js — limaShell()
-const env = {
-  LIMA_SHELLENV_BLOCK: '*',
-  LIMA_SHELLENV_ALLOW: envPassthrough.join(', ')
-};
-spawnSync('limactl', ['shell', '--preserve-env', '--workdir=/app', name], {
-  stdio: 'inherit',
-  env: { ...process.env, ...env }
-});
-```
-
-The `--preserve-env` flag tells Lima to forward environment (subject to the block/allow filters). The env vars are set on the limactl process itself, not inside the VM.
-
-### What breaks if changed
-
-- Remove LIMA_SHELLENV_BLOCK → all host env vars leak into VM
-- Remove LIMA_SHELLENV_ALLOW → MCP tokens don't reach the VM, MCP tools fail
-- Set allow-list wrong → wrong tokens passed, MCP auth failures
-
-## Session Storage
-
-### Problem
-
-Pi session data (conversation history, context) is valuable. The original prototype stored sessions inside the VM at `/pi/data/sessions`. If you deleted or recreated the VM, all session history was lost.
-
-### Solution: Store sessions in the project directory
-
-Sessions go to `/app/.pi-sandbox/sessions/` in the guest, which maps to `<project-dir>/.pi-sandbox/sessions/` on the host.
-
-During provisioning, the host `settings.json` is copied and patched: `sessionDir` is changed to `/app/.pi-sandbox/sessions`.
-
-### Why the project directory (not a central location)
-
-Sessions are contextual to the project. Storing them alongside the code they relate to:
-- Makes them easy to find
-- Keeps them associated with the project if you move or share it
-- Avoids a growing central session store that's hard to clean up
-- Means no additional mount is needed — the project dir is already mounted writable
-
-### Why copy+patch settings.json
-
-The host's `settings.json` may have `sessionDir` set to a path that makes sense on the host (e.g., `/pi/data/sessions` from the original prototype). Inside the VM, we need it to point to `/app/.pi-sandbox/sessions`. Rather than requiring the user to set a guest-aware path in their host config, we copy and patch automatically during provisioning.
-
-### What breaks if changed
-
-- Store sessions inside VM → lost on `pi-sandbox delete` or `recreate`
-- Store in central host location → need additional mount, sessions disconnected from project
-- Skip sessionDir patching → sessions written to default location inside VM (lost on delete)
-
-## VM Registry
-
-The registry at `~/.pi-sandbox/vms.json` maps VM names to project directories:
+The registry lives in `~/.pi-sandbox/config.json` under the top-level `vms` key. Each entry stores the host project directory, registered profile name, cache metadata, and split hashes used for drift detection:
 
 ```json
 {
-  "myproject": "/Users/me/projects/myproject",
-  "other-app": "/Users/me/projects/other-app"
+  "my-project": {
+    "projectDir": "/Users/me/projects/my-project",
+    "profile": "default",
+    "profileCacheName": "pi-cache-1a2b3c4d5e6f7",
+    "profileCacheKey": "1a2b3c4d5e6f...",
+    "finalizerStatus": "complete",
+    "limaConfigHash": "<sha256 of rendered project lima.yaml>",
+    "finalizerHash": "<sha256 of finalizer inputs>",
+    "shellEnvAllowlistHash": "<sha256, informational>",
+    "defaultCmdHash": "<sha256, informational>"
+  }
 }
 ```
 
-### Why it exists
+There is no per-VM `env` blob. On first read, old `env`/`envHash` fields are silently dropped. `limaConfigHash` changes prompt a recreate; this includes profile `lima.yaml` changes and config mount add/remove/rename changes. `finalizerHash` changes re-run the idempotent finalizer in place with no restart; this includes config mount source contents, `projectSessionDir`, `guestTarget`, `source`, and fields on existing mounts. `shellEnvAllowlistHash` and `defaultCmdHash` are stored for visibility only; `exec` and `up` read those values live from the profile. `configMounts[].exfiltrateExcludes` is also read live when exfiltrating.
 
-Lima doesn't know which VMs were created by pi-sandbox vs other Lima VMs. The registry lets `pi-sandbox list` show only pi-sandbox VMs and include the project directory path (which Lima doesn't track).
-
-### Best-effort design
-
-The registry is maintained by `create` (adds entry) and `delete` (removes entry). It's deliberately best-effort:
-- If the file is corrupt or missing, commands still work — only `list` is affected
-- If a VM is deleted outside pi-sandbox (via `limactl delete`), the registry entry becomes stale — `list` shows "Unknown" status
-- No locking — concurrent access is unlikely and the worst case is a stale entry
+Profile cache metadata lives in the same file under `caches`. Each cache entry
+stores the cache key, Lima version, creation timestamp, and a `status` of
+`ready` or `failed`. Cache names are content-addressed, so profiles with
+identical rendered cache Lima YAML share a cache. Cache GC removes any cache
+not referenced by a live registry VM. When cache provisioning fails, the
+failed cache VM is kept (registered with `status: 'failed'`) so its cloud-init
+log can be inspected via `pi-sandbox logs`; the next `pi-sandbox up` deletes
+and rebuilds it. `pi-sandbox cache status` computes the current project's
+cache key using the registered project profile when available, otherwise the
+default profile.

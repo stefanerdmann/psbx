@@ -1,304 +1,252 @@
 # Configuration Reference
 
-## Config File Location
+See [CONCEPTS.md](CONCEPTS.md) for an overview of the profile-centered
+configuration hierarchy (profile template → profile → per-VM registry metadata)
+and typical workflows.
 
-```
-~/.pi-sandbox/config.json
-```
+## State directory
 
-Created by `pi-sandbox init`. If the file doesn't exist, pi-sandbox uses built-in defaults.
+By default pi-sandbox stores all state (config, profiles, registry) under
+`~/.pi-sandbox`. Set the environment variable `PI_SANDBOX_HOME` to use a
+different root location. In the following we refer to the default value
+for simplicity. The directory structure is:
 
-## Config Layering
-
-Configuration is resolved in three layers, with later layers overriding earlier ones:
-
-```
-┌─────────────────────────────┐
-│  3. Project overrides       │  .pi-sandbox.json in project dir (highest priority)
-├─────────────────────────────┤
-│  2. User config             │  ~/.pi-sandbox/config.json
-├─────────────────────────────┤
-│  1. Built-in defaults       │  Hardcoded in the tool (lowest priority)
-└─────────────────────────────┘
+```md
+~/.pi-sandbox/
+├── config.json
+└── profiles/
+    └── <profile_name>/
 ```
 
-**How merging works:** Deep merge — objects merge recursively, primitives and arrays replace entirely. This means you only need to specify values that differ from defaults.
+## Global config
 
-## Schema Reference
+The only global JSON config file is `~/.pi-sandbox/config.json`. It contains
+shared pi-sandbox state settings. The top-level keys are:
 
-### `activeProfile`
+| Field | Purpose | Manage sub-commands | Inspection sub-commands |
+|---|---|---|---|
+| `defaultProfile` | Profile used by lifecycle commands when `--profile` is omitted | `profile set-default` | `profile list` |
+| `vms` | Registry of project VM metadata managed by pi-sandbox | `up`, `stop`, `restart`, `delete` | `list`, `status` |
+| `caches` | Registry of hidden profile cache VMs managed by pi-sandbox | `cache delete [--all]` | `cache list`, `cache status` |
 
-| Property | Value |
-|---|---|
-| **Type** | `string` |
-| **Default** | `"default"` |
-| **Required** | No |
+For debugging and experimentation, you can inspect the current project VM's profile env with `status` (or `status --json`). Edit it in the profile with `profile edit --file env`.
 
-The name of the profile to use when no `--profile` flag is provided. Must match a key in `profiles`.
+## Profiles
 
-**Why it exists:** Lets you set a default environment (e.g., "corporate") while still being able to switch with `--profile personal` on individual commands.
+Profiles live under:
 
----
+```text
+~/.pi-sandbox/profiles/<profile_name>/
+├── env.yaml
+├── lima.schema.json
+├── lima.yaml
+├── TODO needs cop
+├── provision-system.sh
+├── provision-user.sh
+└── ... agent-specific subdirectories
+```
 
-### `profiles`
+`env.yaml` declares the host-config subfolders the profile owns. Each entry
+is mounted read-only into the VM at `/mnt/host-config/<name>` and includes the
+guest path used by finalization and `profile fork`. It also lists which host
+environment variables to forward.
 
-A map of named profiles. Each profile contains all environment-specific settings.
+Example for the default `pi-in-ubuntu` profile template:
 
-**Why profiles exist:** Different environments (corporate Mac with proxy certs, personal Mac without) need different configurations. Rather than maintaining separate config files, profiles let you keep everything in one file and switch between them.
+```yaml
+configMounts:
+  - source: pi/agent
+    name: agent
+    guestTarget: ~/.pi/agent
+    projectSessionDir: .agents/sessions
 
----
+shellEnvAllowlist:
+  # - GHE_MCP_TOKEN
+```
 
-### `profiles.<name>.cert`
+Example for the `copilot-in-ubuntu` profile template:
 
-| Property | Value |
-|---|---|
-| **Type** | `object \| null` |
-| **Default** | `null` |
-| **Required** | No |
+```yaml
+configMounts:
+  - source: copilot
+    name: copilot
+    guestTarget: ~/.copilot
+    projectSessionDir: .agents/copilot-sessions
+    exfiltrateExcludes: [session-state, session-store.db, logs, ide]
 
-Certificate configuration for corporate proxy environments. Set to `null` (or omit entirely) if you don't need corporate certificate injection.
+shellEnvAllowlist:
+  # - COPILOT_GITHUB_TOKEN
+```
 
-**Why nullable:** Personal Macs don't have corporate proxies. When `null`, the entire certificate injection flow is skipped — no cert mount, no cert provisioning, no `NODE_EXTRA_CA_CERTS`. This keeps personal VMs clean and faster to provision.
+### `configMounts` fields
 
----
-
-### `profiles.<name>.cert.hostBundlePath`
-
-| Property | Value |
-|---|---|
-| **Type** | `string` |
-| **Default** | — |
-| **Required** | Yes (if `cert` is not null) |
-
-Absolute path to the CA certificate bundle file on the host. Supports `~` expansion.
-
-**Important:** This must be the real file path, not a symlink. Lima mounts the parent directory into the VM, and symlinks are not resolved across the mount boundary. If your cert path is a symlink, resolve it first: `realpath <path>`.
-
-**Example:** `"~/certs/corporate-ca.pem"` or `"/opt/certs/ca-bundle.pem"`
-
-**Validation:** `pi-sandbox create` will fail if this file doesn't exist. Error message tells you exactly which path to check.
-
-**How it's used:** The directory containing this file is mounted read-only into the VM at `/mnt/host-cert-dir`. The cert file is copied into the system trust store during provisioning. See [Provisioning](PROVISIONING.md) for details.
-
----
-
-### `profiles.<name>.pi.configDir`
-
-| Property | Value |
-|---|---|
-| **Type** | `string` |
-| **Default** | `"~/.pi-sandbox"` |
-| **Required** | No |
-
-Path to the directory containing pi agent configuration files on the host. Supports `~` expansion.
-
-This directory should contain:
-
-| File | Required | How it's used in the VM |
+| Field | Required | Purpose |
 |---|---|---|
-| `auth.json` | **Yes** | Copied to `~/.pi/agent/auth.json` (writable — pi refreshes tokens) |
-| `settings.json` | No | Copied and patched (sessionDir modified), written to `~/.pi/agent/settings.json` |
-| `mcp.json` | No | Copied to `~/.pi/agent/mcp.json` |
+| `source` | yes | Profile-relative path to the host config directory. |
+| `name` | yes | Mount-point segment under `/mnt/host-config/<name>`. Must match `[A-Za-z0-9._-]+`. |
+| `guestTarget` | yes | Absolute or `~`-prefixed path inside the VM that finalization should populate from the mount. Used by `profile fork` to know where to read back. |
+| `projectSessionDir` | no | Workspace-relative directory created under the project (e.g., `.agents/sessions`). |
+| `exfiltrateExcludes` | no | Subpath names to drop after `profile fork` copies the guest target back into the new profile. |
 
-**Why configurable:** Defaults to `~/.pi-sandbox` (same directory as the config file). You might want to point this elsewhere if you share pi config files across tools.
+`source` and `projectSessionDir` must be relative paths that stay inside the
+profile directory and project directory respectively; absolute paths and `..`
+segments are rejected.
 
-**Why this directory is mounted read-only:** Prevents the VM from modifying your host configuration. Auth tokens are *copied* (not symlinked) specifically because pi needs write access for token refresh. See [Architecture — Auth Quarantine](ARCHITECTURE.md#auth-quarantine-pattern) for the full rationale.
+A default profile is set automatically when you create your first profile, or explicitly via `pi-sandbox profile set-default <profile-name>`. It is used when `pi-sandbox up` is called without an explicit `--profile` argument. The name of the default profile is stored in `~/.pi-sandbox/config.json`, alongside information about the currently created VMs that are under management of pi-sandbox.
 
----
+Create a profile with:
 
-### `profiles.<name>.mcp.envPassthrough`
-
-| Property | Value |
-|---|---|
-| **Type** | `string[]` |
-| **Default** | `[]` |
-| **Required** | No |
-
-List of environment variable names to forward from the host shell to the guest VM.
-
-**Example:** `["GHE_MCP_TOKEN", "GITHUB_MCP_TOKEN"]`
-
-**How it works:** When you run `pi-sandbox enter`, the tool sets:
-- `LIMA_SHELLENV_BLOCK=*` — blocks ALL host environment variables from reaching the guest
-- `LIMA_SHELLENV_ALLOW=GHE_MCP_TOKEN, GITHUB_MCP_TOKEN` — allows only these through
-
-**Why blanket-block + selective-allow:** Without blocking, Lima forwards your entire host environment to the guest. This leaks secrets, causes PATH conflicts, and makes the VM environment unpredictable. The allow-list ensures only the variables you explicitly choose reach the guest.
-
-**Validation:** If a listed variable isn't set in your host shell, you'll see a warning (but creation continues). The MCP tools simply won't work in the VM until the variable is set.
-
----
-
-### `profiles.<name>.vm.cpus`
-
-| Property | Value |
-|---|---|
-| **Type** | `number` |
-| **Default** | `4` |
-| **Required** | No |
-
-Number of CPU cores allocated to the VM.
-
----
-
-### `profiles.<name>.vm.memory`
-
-| Property | Value |
-|---|---|
-| **Type** | `string` |
-| **Default** | `"8GiB"` |
-| **Required** | No |
-
-RAM allocated to the VM. Uses Lima's format (e.g., `"4GiB"`, `"16GiB"`).
-
----
-
-### `profiles.<name>.vm.disk`
-
-| Property | Value |
-|---|---|
-| **Type** | `string` |
-| **Default** | `"50GiB"` |
-| **Required** | No |
-
-Disk size for the VM. Uses Lima's format.
-
-**Note:** VM resource settings are baked in at creation time. Changing them requires `pi-sandbox recreate`. Lima does not support hot-reconfiguring VM resources.
-
----
-
-## Profile System
-
-### How profiles work
-
-1. Define multiple profiles in `config.json` under `profiles`
-2. Set `activeProfile` to your default
-3. Override per-command with `--profile <name>`
-
-```json
-{
-  "activeProfile": "corporate",
-  "profiles": {
-    "corporate": {
-      "cert": { "hostBundlePath": "~/certs/corporate-ca.pem" },
-      "mcp": { "envPassthrough": ["GHE_MCP_TOKEN", "GITHUB_MCP_TOKEN"] },
-      "vm": { "cpus": 4, "memory": "8GiB", "disk": "50GiB" }
-    },
-    "personal": {
-      "cert": null,
-      "mcp": { "envPassthrough": ["GITHUB_MCP_TOKEN"] },
-      "vm": { "cpus": 2, "memory": "4GiB", "disk": "30GiB" }
-    }
-  }
-}
+```bash
+pi-sandbox profile init <profile-name>
 ```
 
-### Profile resolution
+Additional initialization modes:
 
-Each profile is merged with the built-in defaults. You only need to specify values that differ:
-
-```json
-{
-  "activeProfile": "minimal",
-  "profiles": {
-    "minimal": {
-      "mcp": { "envPassthrough": ["MY_TOKEN"] }
-    }
-  }
-}
+```bash
+pi-sandbox profile init work --from-profile default
+pi-sandbox profile init nested-test --self-test
+pi-sandbox profile init copilot --template copilot-in-ubuntu
+pi-sandbox profile fork work-local   # from the running current-project VM
 ```
 
-This profile inherits `cert: null`, `pi.configDir: "~/.pi-sandbox"`, `vm.cpus: 4`, etc. from defaults.
+`profile fork` snapshots the current VM's registered profile plus exfiltrated
+`configMounts` guest contents into the new profile, then rebases the current VM
+registry entry to that profile. The current project VM must be running; no
+restart or recreate is performed, and the cache key stays the same when the Lima
+config is unchanged.
 
----
+### `shellEnvAllowlist` entries
 
-## Project-Level Overrides
+The `shellEnvAllowlist` key in `env.yaml` lists host environment variables
+forwarded into the VM shell, e.g.:
 
-Create `.pi-sandbox.json` in your project directory to override profile settings for that project only:
-
-```json
-{
-  "vm": { "cpus": 8, "memory": "16GiB" }
-}
+```yaml
+shellEnvAllowlist:
+  - COPILOT_GH_HOST
+  - COPILOT_GITHUB_TOKEN
 ```
 
-**What you can override:** Any profile field (`cert`, `pi`, `mcp`, `vm`).
+`up` and `exec` read the list live from the VM's registered profile and pass
+only those current host variables through to Lima. The registry stores an
+informational hash for visibility, not the allowlist itself.
 
-**What you cannot override:** `activeProfile` and the `profiles` map. These are user-level settings only.
+Variable names must match:
 
-**Precedence:** Project overrides have the highest priority:
-
-```
-defaults ← user profile ← project overrides
-```
-
-**Use case:** Give a resource-hungry project more CPU/RAM without changing your global config.
-
----
-
-## Complete Examples
-
-### Corporate environment
-
-```json
-{
-  "activeProfile": "corporate",
-  "profiles": {
-    "corporate": {
-      "cert": {
-        "hostBundlePath": "~/certs/corporate-ca.pem"
-      },
-      "pi": {
-        "configDir": "~/.pi-sandbox"
-      },
-      "mcp": {
-        "envPassthrough": ["GHE_MCP_TOKEN", "GITHUB_MCP_TOKEN"]
-      },
-      "vm": {
-        "cpus": 4,
-        "memory": "8GiB",
-        "disk": "50GiB"
-      }
-    }
-  }
-}
+```text
+[A-Za-z_][A-Za-z0-9_]*
 ```
 
-### Personal (minimal)
+## Lima YAML
 
-```json
-{
-  "activeProfile": "default",
-  "profiles": {
-    "default": {
-      "mcp": {
-        "envPassthrough": ["GITHUB_MCP_TOKEN"]
-      }
-    }
-  }
-}
-```
+`lima.yaml` is a normal Lima config. pi-sandbox loads it, resolves profile-relative `provision[].file` paths, then adds dynamic read/write mounts:
 
-Everything else uses built-in defaults: no cert, `~/.pi-sandbox` config dir, 4 CPUs, 8GiB RAM, 50GiB disk.
-
----
-
-## Validation
-
-`pi-sandbox create` and `pi-sandbox recreate` validate your config before attempting VM creation.
-
-### Critical errors (block creation)
-
-| Check | Error message | Fix |
+| Host | Guest | Writable |
 |---|---|---|
-| limactl not installed | "limactl not found" | `brew install lima` |
-| Cert file missing | "Certificate not found at ..." | Check `cert.hostBundlePath` path |
-| Config dir missing | "Pi config directory not found" | Run `pi-sandbox init` |
-| auth.json missing | "auth.json not found" | Copy to config dir |
+| Current project directory | `~/workdir` | Yes |
+| Each profile config subfolder declared in `env.yaml`, resolved through symlinks | `/mnt/host-config/<name>` | No |
 
-### Warnings (creation continues)
+Profile provisioning scripts should be referenced with Lima-native `file` entries:
 
-| Check | Warning message | Impact |
-|---|---|---|
-| MCP env var not set | "Environment variable X not set" | MCP tools won't work in VM |
-| settings.json missing | "settings.json not found" | Pi uses its own defaults |
-| mcp.json missing | "mcp.json not found" | No MCP servers configured |
+```yaml
+provision:
+  - mode: system
+    file: ./provision-system.sh
+  - mode: user
+    file: ./provision-user.sh
+```
+
+Provisioning scripts are cache-time scripts. They should install tools and
+configure the base guest only. Project-specific work such as waiting for
+`~/workdir`, copying `/mnt/host-config/<name>` into the guest target, and linking
+session directories is performed by pi-sandbox finalization after cloning.
+
+### Configuration precedence
+
+The effective Lima config for VM creation is resolved in this order:
+
+1. Profile `lima.yaml`
+2. Project-specific `<project>/.pi-sandbox/lima.yaml`
+3. Extra `pi-sandbox up -- <limactl start args...>` arguments
+
+The project YAML is intentionally restricted to:
+
+```yaml
+cpus: 8
+memory: "16GiB"
+disk: "80GiB"
+```
+
+Any other top-level key is rejected before VM creation. Extra arguments after `--` are not inspected by pi-sandbox and are forwarded to `limactl start`. Because these arguments are opaque creation-time inputs, they bypass the profile cache for that VM creation.
+
+Example one-off Lima override (bypasses VM caching):
+
+```bash
+pi-sandbox up -- --cpus=6 --memory=12GiB
+```
+
+### Host CA certificate injection
+
+Use Lima-native `caCerts.files`:
+
+```yaml
+caCerts:
+  files:
+    - "~/path/to/my-corporate-ca.pem"
+```
+
+This injects host CA certificates into the VM trust store. Corporate proxy CAs are the most common reason to enable it.
+
+## Pi agent configuration
+
+Everything under `~/.pi-sandbox/profiles/<profile>/pi/agent` is mounted read-only at `/mnt/host-config/agent` and copied into the guest as `~/.pi/agent` during project VM finalization. This can include, but is not limited to:
+
+| Content | Reference |
+|---|---|
+| `skills/` | https://pi.dev/docs/latest/skills |
+| `extensions/` | https://pi.dev/docs/latest/extensions |
+| `keybindings.json` | https://pi.dev/docs/latest/keybindings |
+| `settings.json` | https://pi.dev/docs/latest/settings |
+| `auth.json`, `models.json` | https://pi.dev/docs/latest/authentication |
+| `mcp.json` | https://pi.dev/packages/pi-mcp-adapter |
+
+None of these files are required from pi-sandbox's perspective. If `settings.json` exists, the guest copy is patched after copying so `sessionDir` points to the project:
+
+```json
+{
+  "sessionDir": "/home/pi/workdir/.agents/sessions"
+}
+```
+
+The profile `pi/agent` directory may be a symlink to `~/.pi/agent`. pi-sandbox resolves and mounts the symlink target read-only, then copies its contents into the VM.
+
+The host profile is not mutated by the VM. Changes made inside the guest to `~/.pi/agent` last only for the lifetime of that VM. Persist configuration changes by writing them under `~/workdir/.agents`, manually copying them back to the host profile, or forking the running VM into a new profile:
+
+```bash
+pi-sandbox profile fork new-profile
+```
+
+## GitHub Copilot CLI configuration
+
+The `copilot-in-ubuntu` profile template installs the
+[GitHub Copilot CLI](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-config-dir-reference)
+in the VM. Create a profile with:
+
+```bash
+pi-sandbox profile init copilot --template copilot-in-ubuntu
+cp -a ~/.copilot/.            ~/.pi-sandbox/profiles/copilot/copilot/   # optional
+```
+
+The profile mounts the Copilot config directory:
+
+| Profile path | Guest mount | Guest target | Notes |
+|---|---|---|---|
+| `copilot/` | `/mnt/host-config/copilot` (read-only) | `~/.copilot` | Follows the upstream [`~/.copilot` layout](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-config-dir-reference) (e.g., `settings.json`, `mcp-config.json`, `agents/`, `instructions/`, `skills/`, `hooks/`). |
+
+During project VM finalization the directory is copied to `~/.copilot` in the
+guest. To keep session history with the project, `~/.copilot/session-state` is
+replaced with a symlink to `~/workdir/.agents/copilot-sessions`.
+
+`profile fork <new-profile>` exfiltrates `~/.copilot` back into the new profile
+but excludes `session-state`, `session-store.db`, `logs`, and `ide` (declared
+via `exfiltrateExcludes` in `env.yaml`) so the workspace's session history is
+not duplicated into the profile.
