@@ -23,8 +23,8 @@ checkout:
 ```bash
 git clone https://github.com/stefanerdmann/psbx.git
 cd psbx
-npm install        # installs dependencies and compiles TypeScript → dist/
-npm install -g .
+npm install  # installs dependencies and compiles TypeScript → dist/
+npm install --global --install-links .  # installs psbx CLI globally
 ```
 
 On Linux, the global install step may require `sudo`.
