@@ -10,8 +10,8 @@ export const DESCRIPTION = 'Generate shell completion scripts (bash, zsh, fish)'
 export const HELP_TEXT =
   'Auto-detects shell from $SHELL when no argument given.\n\n' +
   '  bash:   eval "$(psbx completion bash)"   # add to ~/.bashrc\n' +
-  '  zsh:    mkdir -p ~/.local/share/zsh/completions/completions && psbx completion zsh > ~/.local/share/zsh/completions/_psbx\n' +
-  '          # and add to ~/.zshrc (before compinit): fpath+=(~/.local/share/zsh/completions/completions)\n' +
+  '  zsh:    mkdir -p ~/.local/share/zsh/completions && psbx completion zsh > ~/.local/share/zsh/completions/_psbx\n' +
+  '          # and add to ~/.zshrc (before compinit): fpath+=(~/.local/share/zsh/completions)\n' +
   '          # alternatively (after compinit): eval "$(psbx completion zsh)"\n' +
   '  fish:   psbx completion fish > ~/.config/fish/completions/psbx.fish';
 
@@ -128,10 +128,10 @@ const ZSH_COMPLETION = `#compdef psbx
 # Installation:
 #
 #   Option 1 – file in $fpath (recommended):
-#     mkdir -p ~/.local/share/zsh/completions/completions
-#     psbx completion zsh > ~/.local/share/zsh/completions/completions/_psbx
+#     mkdir -p ~/.local/share/zsh/completions
+#     psbx completion zsh > ~/.local/share/zsh/completions/_psbx
 #     # and add to ~/.zshrc BEFORE the compinit call:
-#     #   fpath+=(~/.local/share/zsh/completions/completions)
+#     #   fpath+=(~/.local/share/zsh/completions)
 #     #   autoload -Uz compinit && compinit
 #
 #   Option 2 – eval in ~/.zshrc (add AFTER compinit):
