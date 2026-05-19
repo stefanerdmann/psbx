@@ -12,7 +12,7 @@ configuration hierarchy (profile template → profile → per-VM registry metada
 | `src/template.js` | Parses profile and project Lima YAML, deep-merges safe overrides, resolves provisioning file paths, adds dynamic mounts (project workdir + each profile config subfolder), and serializes the final Lima config. |
 | `src/cache.js` | Builds/reuses hidden clone source VMs for effective profile cache keys and creates project VMs with `limactl clone`. |
 | `src/commands/cache.js` | Lists profile cache VMs and deletes either the current project's matching cache or all registered caches. |
-| `src/finalize.js` | Runs lightweight per-project finalization after clone/start: config copy, session directory setup, Copilot session symlink, and clone identity cleanup. |
+| `src/finalize.js` | Runs lightweight per-project finalization after clone/start: config copy, session directory setup, session directory symlinking, and clone identity cleanup. |
 | `src/validate.js` | Checks Lima availability, profile files, project override allowlist, and environment variable names. |
 | `src/lima.js` | Wraps `limactl` subprocess calls. |
 | `src/registry.js` | Stores VM and profile-cache metadata needed by commands that do not accept profile options. |
@@ -94,9 +94,9 @@ If the registered profile is missing, `exec` still works but forwards no host
 environment variables and prints a warning. This keeps non-profile commands
 deterministic and prevents accidental forwarding of the host environment.
 
-## VM-local and persistent pi data
+## VM-local and persistent agent data
 
-`~/.pi/agent` is copied into the VM and is VM-local. `~/workdir/.agents` is inside the writable project mount and persists on the host. Project finalization rewrites `settings.json` to store sessions at `~/workdir/.agents/sessions`.
+Each agent's config directory (e.g., `~/.pi/agent`, `~/.copilot`) is copied into the VM during finalization and is VM-local. `~/workdir/.agents` is inside the writable project mount and persists on the host. When a `configMount` declares both `projectSessionDir` and `sessionSymlink`, finalization creates the project directory and replaces the `sessionSymlink` path inside the VM with a symlink pointing to it — for example, `~/.pi/agents/sessions` → `~/workdir/.agents/pi-sessions` and `~/.copilot/session-state` → `~/workdir/.agents/copilot-sessions/session-state`.
 
 ## Registry
 
@@ -118,7 +118,7 @@ The registry lives in `~/.psbx/config.json` under the top-level `vms` key. Each 
 }
 ```
 
-There is no per-VM `env` blob. On first read, old `env`/`envHash` fields are silently dropped. `limaConfigHash` changes prompt a recreate; this includes profile `lima.yaml` changes and config mount add/remove/rename changes. `finalizerHash` changes re-run the idempotent finalizer in place with no restart; this includes config mount source contents, `projectSessionDir`, `guestTarget`, `source`, and fields on existing mounts. `shellEnvAllowlistHash` and `defaultCmdHash` are stored for visibility only; `exec` and `up` read those values live from the profile. `configMounts[].exfiltrateExcludes` is also read live when exfiltrating.
+There is no per-VM `env` blob. On first read, old `env`/`envHash` fields are silently dropped. `limaConfigHash` changes prompt a recreate; this includes profile `lima.yaml` changes and config mount add/remove/rename changes. `finalizerHash` changes re-run the idempotent finalizer in place with no restart; this includes config mount source contents, `projectSessionDir`, `sessionSymlink`, `guestTarget`, `source`, and fields on existing mounts. `shellEnvAllowlistHash` and `defaultCmdHash` are stored for visibility only; `exec` and `up` read those values live from the profile. `configMounts[].exfiltrateExcludes` is also read live when exfiltrating.
 
 Profile cache metadata lives in the same file under `caches`. Each cache entry
 stores the cache key, Lima version, creation timestamp, and a `status` of

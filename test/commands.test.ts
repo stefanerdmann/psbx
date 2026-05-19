@@ -779,7 +779,7 @@ process.exit(1);
         import { resolveProfile } from '${resolve(__dirname, '..', 'src', 'config.ts').replace(/\\/g, '/')}';
         import { profileHashes } from '${resolve(__dirname, '..', 'src', 'commands', 'helpers.ts').replace(/\\/g, '/')}';
         const profile = resolveProfile({ defaultProfile: 'self-test' }, 'self-test');
-        const hashes = profileHashes(profile, ${JSON.stringify(projDir)});
+        const hashes = profileHashes(profile, process.cwd());
         console.log(JSON.stringify(hashes));
       `;
       const hashResult = spawnSync(process.execPath, ['--input-type=module', '-e', hashScript], {
@@ -898,7 +898,12 @@ process.exit(1);
     try {
       run(['profile', 'init', 'self-test', '--self-test'], { HOME: home, cwd: projDir });
       writeRegistry(home, projDir, { profile: 'self-test' });
-      const r = run(['up', '--profile', 'self-test'], { HOME: home, cwd: projDir, input: 'n\n' });
+      const fake = writeFakeLimactl({});
+      const env = {
+        PATH: `${fake.binDir}:${process.env.PATH}`,
+        PI_TEST_LIMA_STATE: fake.statePath,
+      };
+      const r = run(['up', '--profile', 'self-test'], { HOME: home, cwd: projDir, input: 'n\n', env });
       assert.ok(
         r.stdout.includes('is inconsistent with the requested configuration:'),
         `expected detailed reason format in stdout:\n${r.stdout}`,

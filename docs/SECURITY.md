@@ -25,7 +25,7 @@ Host                                    VM Guest
 ~/.psbx/profiles/<p>/<configMount.source> ──► /mnt/host-config/<name> (RO)
                                                   └─ copied to <guestTarget> (VM-local)
 <project>/ ◄────────────────────────►   ~/workdir (RW)
-                                        └─ ~/workdir/.agents/sessions (persistent)
+                                        └─ ~/workdir/.agents/<tool>-sessions (persistent, via sessionSymlink)
 shellEnvAllowlist variables ───────────► LIMA_SHELLENV_ALLOW (filtered)
 profile cache VM ──────────────────────► cloned disk without project/profile config data
 ```

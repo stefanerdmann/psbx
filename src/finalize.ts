@@ -6,8 +6,8 @@
  *   1. `CLONE_IDENTITY_FINALIZER` + `profileConfigFinalizerScript()` — run
  *      on every project VM after clone/create. Materializes profile config
  *      mounts into the guest home, applies per-mount fix-ups (e.g. tighten
- *      `auth.json` perms, point pi's `sessionDir` at the project's `.agents`
- *      dir, symlink the copilot session-state into the project), and on a
+ *      `auth.json` perms, symlink agent session directories into the
+ *      project via the `sessionSymlink` config), and on a
  *      cloned VM regenerates SSH host keys once.
  *
  *   2. `CACHE_SYSPREP_SCRIPT` — runs once at the end of cache provisioning
@@ -48,29 +48,12 @@ function profileConfigFinalizerScript(profile: Profile): string {
       `if [ -d ${shellQuote(`${source}/.`)} ]; then cp -a ${shellQuote(`${source}/.`)} ${shellQuote(target)}; fi`,
     );
 
-    if (target === '/home/pi/.pi/agent') {
-      const sessionDir = mount.projectSessionDir
-        ? guestProjectPath(mount.projectSessionDir)
-        : `${GUEST_WORKDIR}/.agents/sessions`;
-      lines.push(
-        `if [ -f ${shellQuote(`${target}/auth.json`)} ]; then chmod 600 ${shellQuote(`${target}/auth.json`)}; fi`,
-      );
-      lines.push(`if command -v node >/dev/null 2>&1; then
-  node -e ${shellQuote(`
-    const fs = require('fs');
-    const path = '${target}/settings.json';
-    let settings = {};
-    try { settings = JSON.parse(fs.readFileSync(path, 'utf-8')); } catch {}
-    settings.sessionDir = '${sessionDir}';
-    fs.writeFileSync(path, JSON.stringify(settings, null, 2) + '\\n');
-  `)}
-fi`);
-    }
-
-    if (target === '/home/pi/.copilot' && mount.projectSessionDir) {
+    if (mount.projectSessionDir && mount.sessionSymlink) {
       const sessionTarget = guestProjectPath(mount.projectSessionDir);
-      lines.push(`rm -rf ${shellQuote(`${target}/session-state`)}`);
-      lines.push(`ln -sfn ${shellQuote(sessionTarget)} ${shellQuote(`${target}/session-state`)}`);
+      const symlinkPath = expandGuestHome(mount.sessionSymlink);
+      lines.push(`rm -rf ${shellQuote(symlinkPath)}`);
+      lines.push(`mkdir -p ${shellQuote(symlinkPath.replace(/\/[^/]+$/, ''))}`);
+      lines.push(`ln -sfn ${shellQuote(sessionTarget)} ${shellQuote(symlinkPath)}`);
     }
   }
 

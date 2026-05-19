@@ -40,6 +40,7 @@ describe('profileConfigFinalizerScript', { concurrency: true }, () => {
           name: 'agent',
           guestTarget: '~/.pi/agent',
           projectSessionDir: '.agents/sessions',
+          sessionSymlink: '~/.pi/agents/sessions',
         },
       ],
     });
@@ -56,12 +57,13 @@ describe('profileConfigFinalizerScript', { concurrency: true }, () => {
           source: 'copilot',
           name: 'copilot',
           guestTarget: '~/.copilot',
-          projectSessionDir: '.agents/copilot-sessions',
+          projectSessionDir: '.agents/copilot-sessions/session-state',
+          sessionSymlink: '~/.copilot/session-state',
         },
       ],
     });
     assert.ok(script.includes('mkdir -p'));
-    assert.ok(script.includes('.agents/copilot-sessions'));
+    assert.ok(script.includes('.agents/copilot-sessions/session-state'));
   });
 
   it('handles empty configMounts', () => {

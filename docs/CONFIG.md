@@ -58,7 +58,8 @@ configMounts:
   - source: pi/agent
     name: agent
     guestTarget: ~/.pi/agent
-    projectSessionDir: .agents/sessions
+    projectSessionDir: .agents/pi-sessions
+    sessionSymlink: ~/.pi/agents/sessions
 
 shellEnvAllowlist:
   # - GHE_MCP_TOKEN
@@ -71,7 +72,8 @@ configMounts:
   - source: copilot
     name: copilot
     guestTarget: ~/.copilot
-    projectSessionDir: .agents/copilot-sessions
+    projectSessionDir: .agents/copilot-sessions/session-state
+    sessionSymlink: ~/.copilot/session-state
     exfiltrateExcludes: [session-state, session-store.db, logs, ide]
 
 shellEnvAllowlist:
@@ -85,7 +87,8 @@ shellEnvAllowlist:
 | `source` | yes | Profile-relative path to the host config directory. |
 | `name` | yes | Mount-point segment under `/mnt/host-config/<name>`. Must match `[A-Za-z0-9._-]+`. |
 | `guestTarget` | yes | Absolute or `~`-prefixed path inside the VM that finalization should populate from the mount. Used by `profile fork` to know where to read back. |
-| `projectSessionDir` | no | Workspace-relative directory created under the project (e.g., `.agents/sessions`). |
+| `projectSessionDir` | no | Workspace-relative directory created under the project (e.g., `.agents/pi-sessions`). When `sessionSymlink` is also set, this is where the symlink points. |
+| `sessionSymlink` | no | Absolute or `~`-prefixed guest path that finalization replaces with a symlink to `projectSessionDir`. Any existing file or directory at this path is removed first. |
 | `exfiltrateExcludes` | no | Subpath names to drop after `profile fork` copies the guest target back into the new profile. |
 
 `source` and `projectSessionDir` must be relative paths that stay inside the
@@ -209,13 +212,7 @@ Everything under `~/.psbx/profiles/<profile>/pi/agent` is mounted read-only at `
 | `auth.json`, `models.json` | https://pi.dev/docs/latest/authentication |
 | `mcp.json` | https://pi.dev/packages/pi-mcp-adapter |
 
-None of these files are required from psbx's perspective. If `settings.json` exists, the guest copy is patched after copying so `sessionDir` points to the project:
-
-```json
-{
-  "sessionDir": "/home/pi/workdir/.agents/sessions"
-}
-```
+None of these files are required from psbx's perspective. Session persistence is handled by symlinking `~/.pi/agents/sessions` inside the VM to `~/workdir/.agents/pi-sessions` in the project directory, so pi session history survives VM rebuilds.
 
 The profile `pi/agent` directory may be a symlink to `~/.pi/agent`. psbx resolves and mounts the symlink target read-only, then copies its contents into the VM.
 
@@ -244,7 +241,7 @@ The profile mounts the Copilot config directory:
 
 During project VM finalization the directory is copied to `~/.copilot` in the
 guest. To keep session history with the project, `~/.copilot/session-state` is
-replaced with a symlink to `~/workdir/.agents/copilot-sessions`.
+replaced with a symlink to `~/workdir/.agents/copilot-sessions/session-state`.
 
 `profile fork <new-profile>` exfiltrates `~/.copilot` back into the new profile
 but excludes `session-state`, `session-store.db`, `logs`, and `ide` (declared

@@ -12,9 +12,9 @@ Provisioning is split into two phases:
 2. **Project finalization** runs after a project VM has been cloned from the
    cache and started. psbx waits for `~/workdir`, creates declared
    `projectSessionDir` directories, copies each current profile config mount
-   into the guest target, patches pi `settings.json#sessionDir`, fixes
-   `auth.json` permissions, and links Copilot `session-state` into the project
-   session directory.
+   into the guest target, and for any mount
+   that declares both `projectSessionDir` and `sessionSymlink` replaces that
+   guest path with a symlink into the project session directory.
 
 ## pi-in-ubuntu profile template
 
@@ -45,8 +45,9 @@ The `pi-in-ubuntu` user script:
 4. Updates `.bashrc` so global npm tools are on `PATH`, CA certificates are used, and new shells start in `~/workdir`.
 
 The host profile is mounted read-only and is not mutated. Finalization copies
-`/mnt/host-config/agent` into `~/.pi/agent`, creates or rewrites `settings.json` to use
-`~/workdir/.agents/sessions`, and restricts `auth.json` permissions. The copied
+`/mnt/host-config/agent` into `~/.pi/agent`, restricts `auth.json` permissions,
+and symlinks `~/.pi/agents/sessions` to `~/workdir/.agents/pi-sessions` so pi
+session history persists in the project directory. The copied
 `~/.pi/agent` directory is part of the VM. Changes there are lost when the VM is
 deleted unless copied back to the host profile or exfiltrated into a new
 profile with `psbx profile fork <profile>`.
@@ -69,7 +70,7 @@ User-side cache provisioning:
 
 Project finalization copies `/mnt/host-config/copilot` → `~/.copilot` and
 replaces `~/.copilot/session-state` with a symlink to
-`~/workdir/.agents/copilot-sessions` so Copilot session history persists in the
+`~/workdir/.agents/copilot-sessions/session-state` so Copilot session history persists in the
 project directory.
 
 `psbx profile fork <name>` exfiltrates `~/.copilot` back into the new profile, but skips `session-state`, `session-store.db`, `logs`, and `ide` so workspace-bound data stays in the workspace.

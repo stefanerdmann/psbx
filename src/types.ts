@@ -12,6 +12,7 @@ export interface ConfigMount {
   name: string;
   guestTarget: string;
   projectSessionDir?: string;
+  sessionSymlink?: string;
   exfiltrateExcludes?: string[];
 }
 
