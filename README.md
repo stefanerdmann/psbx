@@ -175,6 +175,7 @@ or delete the cache key for a specific profile.
 | `psbx profile set-default <name>` | Set the default profile | |
 | `psbx profile edit [profile]` | Open a profile in `$EDITOR` | `--file <file>` (lima, env, or relative path) |
 | `psbx profile fork <new-profile>` | Snapshot the running current-project VM profile and guest config into a new profile, then rebase the VM to it without restart/recreate | |
+| `psbx profile rename <src> <dest>` | Rename a profile, updating all references (default, VMs, caches) | `-f, --force` |
 | `psbx status` | Show current project VM status, environment, and sync state | |
 | `psbx list` | List registered VMs (alias: `ls`) | |
 | `psbx logs` | Show cloud-init logs for the project and its cache VM (failed cache VMs are kept for inspection) | |

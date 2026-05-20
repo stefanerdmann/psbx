@@ -200,3 +200,4 @@ forwarding no host env vars.
 | Inspect the env a VM reads from its profile | `status` or `status --json` |
 | Change env for all VMs using a profile | `profile edit <name> --file env` |
 | Snapshot a running VM's current profile plus guest config into a new reusable profile | `profile fork <new-name>` |
+| Rename a profile (all references updated automatically) | `profile rename <old> <new>` |

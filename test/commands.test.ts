@@ -199,6 +199,133 @@ describe('commands', { concurrency: false }, () => {
     assert.ok(r.stdout.includes('No sandboxes created yet.'), `stdout: ${r.stdout}`);
   });
 
+  // --- profile rename ---
+
+  it('[cmd] profile rename moves a profile directory', () => {
+    const home = mkdtempSync(join(tmpdir(), 'psbx-rename-'));
+    try {
+      run(['profile', 'init', 'old-name', '--self-test'], { HOME: home, cwd: projectDir });
+      assert.ok(existsSync(join(home, '.psbx', 'profiles', 'old-name')));
+      const r = run(['profile', 'rename', 'old-name', 'new-name'], { HOME: home, cwd: projectDir });
+      assert.strictEqual(r.status, 0, `stderr: ${r.stderr}`);
+      assert.ok(r.stdout.includes('Renamed profile'), `stdout: ${r.stdout}`);
+      assert.ok(!existsSync(join(home, '.psbx', 'profiles', 'old-name')));
+      assert.ok(existsSync(join(home, '.psbx', 'profiles', 'new-name')));
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it('[cmd] profile rename updates defaultProfile', () => {
+    const home = mkdtempSync(join(tmpdir(), 'psbx-rename-def-'));
+    try {
+      run(['profile', 'init', 'alpha', '--self-test', '--set-as-default'], {
+        HOME: home,
+        cwd: projectDir,
+      });
+      const r = run(['profile', 'rename', 'alpha', 'beta'], { HOME: home, cwd: projectDir });
+      assert.strictEqual(r.status, 0, `stderr: ${r.stderr}`);
+      const configRaw = readFileSync(join(home, '.psbx', 'config.json'), 'utf-8');
+      const config = JSON.parse(configRaw) as { defaultProfile?: string };
+      assert.strictEqual(config.defaultProfile, 'beta');
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it('[cmd] profile rename updates VM registry entries', () => {
+    const home = mkdtempSync(join(tmpdir(), 'psbx-rename-vm-'));
+    try {
+      run(['profile', 'init', 'src', '--self-test'], { HOME: home, cwd: projectDir });
+      // Manually write a registry entry pointing to the profile
+      const configPath = join(home, '.psbx', 'config.json');
+      const config = JSON.parse(readFileSync(configPath, 'utf-8')) as ConfigFileData;
+      config.vms = { 'test-vm': { projectDir: '/tmp/test', profile: 'src' } };
+      writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+      const r = run(['profile', 'rename', 'src', 'dst'], { HOME: home, cwd: projectDir });
+      assert.strictEqual(r.status, 0, `stderr: ${r.stderr}`);
+      const updated = JSON.parse(readFileSync(configPath, 'utf-8')) as ConfigFileData;
+      assert.strictEqual(updated.vms?.['test-vm']?.profile, 'dst');
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it('[cmd] profile rename updates cache registry entries', () => {
+    const home = mkdtempSync(join(tmpdir(), 'psbx-rename-cache-'));
+    try {
+      run(['profile', 'init', 'old', '--self-test'], { HOME: home, cwd: projectDir });
+      const configPath = join(home, '.psbx', 'config.json');
+      const config = JSON.parse(readFileSync(configPath, 'utf-8')) as ConfigFileData;
+      config.caches = {
+        'psbx-cache-abc': {
+          profile: 'old',
+          cacheKey: 'abc123',
+          limaVersion: '1.0',
+          createdAt: null,
+        },
+      };
+      writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+      const r = run(['profile', 'rename', 'old', 'new'], { HOME: home, cwd: projectDir });
+      assert.strictEqual(r.status, 0, `stderr: ${r.stderr}`);
+      const updated = JSON.parse(readFileSync(configPath, 'utf-8')) as ConfigFileData;
+      assert.strictEqual(updated.caches?.['psbx-cache-abc']?.profile, 'new');
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it('[cmd] profile rename fails when src does not exist', () => {
+    const home = mkdtempSync(join(tmpdir(), 'psbx-rename-nosrc-'));
+    try {
+      const r = run(['profile', 'rename', 'nope', 'dest'], { HOME: home, cwd: projectDir });
+      assert.strictEqual(r.status, 1);
+      assert.ok(r.stderr.includes('not found'), `stderr: ${r.stderr}`);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it('[cmd] profile rename refuses to overwrite without --force', () => {
+    const home = mkdtempSync(join(tmpdir(), 'psbx-rename-exists-'));
+    try {
+      run(['profile', 'init', 'a', '--self-test'], { HOME: home, cwd: projectDir });
+      run(['profile', 'init', 'b', '--self-test'], { HOME: home, cwd: projectDir });
+      const r = run(['profile', 'rename', 'a', 'b'], { HOME: home, cwd: projectDir });
+      assert.strictEqual(r.status, 1);
+      assert.ok(r.stderr.includes('already exists'), `stderr: ${r.stderr}`);
+      // Both profiles should still exist
+      assert.ok(existsSync(join(home, '.psbx', 'profiles', 'a')));
+      assert.ok(existsSync(join(home, '.psbx', 'profiles', 'b')));
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it('[cmd] profile rename --force overwrites existing dest', () => {
+    const home = mkdtempSync(join(tmpdir(), 'psbx-rename-force-'));
+    try {
+      run(['profile', 'init', 'a', '--self-test'], { HOME: home, cwd: projectDir });
+      run(['profile', 'init', 'b', '--self-test'], { HOME: home, cwd: projectDir });
+      const r = run(['profile', 'rename', 'a', 'b', '--force'], { HOME: home, cwd: projectDir });
+      assert.strictEqual(r.status, 0, `stderr: ${r.stderr}`);
+      assert.ok(!existsSync(join(home, '.psbx', 'profiles', 'a')));
+      assert.ok(existsSync(join(home, '.psbx', 'profiles', 'b')));
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it('[cmd] profile rename requires both arguments', () => {
+    const home = mkdtempSync(join(tmpdir(), 'psbx-rename-args-'));
+    try {
+      const r = run(['profile', 'rename'], { HOME: home, cwd: projectDir });
+      assert.strictEqual(r.status, 1);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
   it('[cmd] profile list shows existing profiles', () => {
     const r = run(['profile', 'list'], { HOME: tmpHome, cwd: projectDir });
     assert.strictEqual(r.status, 0, `stderr: ${r.stderr}`);
@@ -903,7 +1030,12 @@ process.exit(1);
         PATH: `${fake.binDir}:${process.env.PATH}`,
         PI_TEST_LIMA_STATE: fake.statePath,
       };
-      const r = run(['up', '--profile', 'self-test'], { HOME: home, cwd: projDir, input: 'n\n', env });
+      const r = run(['up', '--profile', 'self-test'], {
+        HOME: home,
+        cwd: projDir,
+        input: 'n\n',
+        env,
+      });
       assert.ok(
         r.stdout.includes('is inconsistent with the requested configuration:'),
         `expected detailed reason format in stdout:\n${r.stdout}`,

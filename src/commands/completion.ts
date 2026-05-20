@@ -33,7 +33,7 @@ _psbx() {
   cur="\${COMP_WORDS[COMP_CWORD]}"
   prev="\${COMP_WORDS[COMP_CWORD-1]}"
   commands="up exec stop restart delete cache profile status list ls logs completion"
-  profile_commands="init fork delete list ls set-default edit"
+  profile_commands="init fork rename delete list ls set-default edit"
   cache_commands="list ls status delete"
 
   if [[ \${COMP_CWORD} -eq 1 ]]; then
@@ -67,6 +67,9 @@ _psbx() {
     case "\${COMP_WORDS[2]}" in
       init)
         COMPREPLY=( $(compgen -W "--from-profile --template --self-test --copy-from-host --symlink-from-host --set-as-default" -- "\${cur}") )
+        ;;
+      rename)
+        COMPREPLY=( $(compgen -W "--force $(_psbx_profiles)" -- "\${cur}") )
         ;;
       delete)
         COMPREPLY=( $(compgen -W "--force --all $(_psbx_profiles)" -- "\${cur}") )
@@ -148,6 +151,7 @@ _psbx_profile_commands() {
   profile_cmds=(
     'init:Initialize a psbx profile'
     'fork:Snapshot the current project VM into a new profile and rebase the VM onto it'
+    'rename:Rename a profile'
     'delete:Delete a profile'
     'list:List all profiles'
     'ls:List all profiles'
@@ -176,6 +180,12 @@ _psbx_profile_commands() {
           ;;
         fork)
           _arguments '1:new-profile:'
+          ;;
+        rename)
+          _arguments \\
+            '(-f --force)'{-f,--force}'[Overwrite destination if it exists]' \\
+            '1:src-profile:_psbx_profiles' \\
+            '2:dest-profile:'
           ;;
         delete)
           _arguments \\
@@ -366,6 +376,7 @@ complete -c psbx -n '__fish_use_subcommand' -a completion -d 'Generate shell com
 # profile subcommands
 complete -c psbx -n '__psbx_needs_profile_subcmd' -a init -d 'Initialize a psbx profile'
 complete -c psbx -n '__psbx_needs_profile_subcmd' -a fork -d 'Snapshot the current project VM into a new profile and rebase the VM onto it'
+complete -c psbx -n '__psbx_needs_profile_subcmd' -a rename -d 'Rename a profile'
 complete -c psbx -n '__psbx_needs_profile_subcmd' -a delete -d 'Delete a profile'
 complete -c psbx -n '__psbx_needs_profile_subcmd' -a list -d 'List all profiles'
 complete -c psbx -n '__psbx_needs_profile_subcmd' -a ls -d 'List all profiles'
@@ -380,6 +391,10 @@ complete -c psbx -n '__psbx_profile_subcmd init' -l copy-from-host -d 'Copy host
 complete -c psbx -n '__psbx_profile_subcmd init' -l symlink-from-host -d 'Symlink host config directories into the new profile'
 
 complete -c psbx -n '__psbx_profile_subcmd init' -l set-as-default -d 'Set this profile as the default'
+
+# profile rename options
+complete -c psbx -n '__psbx_profile_subcmd rename' -s f -l force -d 'Overwrite destination if it exists'
+complete -c psbx -n '__psbx_profile_subcmd rename' -a '(__psbx_profiles)' -d 'Profile name'
 
 # profile delete options
 complete -c psbx -n '__psbx_profile_subcmd delete' -s f -l force -d 'Skip confirmation prompt'

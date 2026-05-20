@@ -52,6 +52,10 @@ import {
   DESCRIPTION as PROFILE_FORK_DESCRIPTION,
   profileFork,
 } from '../src/commands/profile-fork.ts';
+import {
+  DESCRIPTION as RENAME_PROFILE_DESCRIPTION,
+  renameProfile,
+} from '../src/commands/rename-profile.ts';
 import { DESCRIPTION as RESTART_DESCRIPTION, restart } from '../src/commands/restart.ts';
 import {
   DESCRIPTION as SET_DEFAULT_DESCRIPTION,
@@ -223,7 +227,7 @@ cacheCmd
 // --- profile subcommand namespace -------------------------------------------
 const profileCmd = program
   .command('profile')
-  .description('Manage profiles (init, delete, list, edit, set-default)');
+  .description('Manage profiles (init, delete, list, edit, rename, set-default)');
 
 profileCmd
   .command('init <profile>')
@@ -244,6 +248,15 @@ profileCmd
   .command('fork <new-profile>')
   .description(PROFILE_FORK_DESCRIPTION)
   .action((newProfile: string): Promise<void> => profileFork(newProfile));
+
+profileCmd
+  .command('rename <src> <dest>')
+  .description(RENAME_PROFILE_DESCRIPTION)
+  .option('-f, --force', 'Overwrite destination profile if it exists')
+  .action(
+    (src: string, dest: string, options: { force?: boolean }): Promise<void> =>
+      renameProfile(src, dest, options),
+  );
 
 profileCmd
   .command('delete')
