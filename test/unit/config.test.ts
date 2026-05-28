@@ -177,9 +177,9 @@ describe('validateEnv', { concurrency: true }, () => {
                 source: 'pi/agent',
                 name: 'agent',
                 guestTarget: '~/.pi/agent',
-                sessions: { workspacePath: '../sessions' },
               },
             ],
+            sessions: [{ workspacePath: '../sessions' }],
           },
           'env',
         ),
@@ -286,5 +286,75 @@ describe('validateEnv', { concurrency: true }, () => {
       'env',
     );
     assert.strictEqual(result.defaultCmd, undefined);
+  });
+
+  it('defaults sessions to empty array when omitted', () => {
+    const result = validateEnv(
+      {
+        configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+      },
+      'env',
+    );
+    assert.deepStrictEqual(result.sessions, []);
+  });
+
+  it('parses valid sessions array', () => {
+    const result = validateEnv(
+      {
+        configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+        sessions: [
+          { workspacePath: '.agents/sessions/', guestSymlink: '~/.pi/agent/sessions/' },
+          { workspacePath: '.agents/db' },
+        ],
+      },
+      'env',
+    );
+    assert.strictEqual(result.sessions.length, 2);
+    assert.strictEqual(result.sessions[0].workspacePath, '.agents/sessions/');
+    assert.strictEqual(result.sessions[0].guestSymlink, '~/.pi/agent/sessions/');
+    assert.strictEqual(result.sessions[1].workspacePath, '.agents/db');
+    assert.strictEqual(result.sessions[1].guestSymlink, undefined);
+  });
+
+  it('rejects non-array sessions', () => {
+    assert.throws(
+      () =>
+        validateEnv(
+          {
+            configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+            sessions: 'not-an-array',
+          },
+          'env',
+        ),
+      /sessions must be an array/,
+    );
+  });
+
+  it('rejects sessions entry with empty workspacePath', () => {
+    assert.throws(
+      () =>
+        validateEnv(
+          {
+            configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+            sessions: [{ workspacePath: '' }],
+          },
+          'env',
+        ),
+      /workspacePath must be a non-empty string/,
+    );
+  });
+
+  it('rejects sessions entry with empty guestSymlink', () => {
+    assert.throws(
+      () =>
+        validateEnv(
+          {
+            configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+            sessions: [{ workspacePath: '.agents/sessions/', guestSymlink: '' }],
+          },
+          'env',
+        ),
+      /guestSymlink must be a non-empty string/,
+    );
   });
 });

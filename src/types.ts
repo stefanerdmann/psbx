@@ -7,24 +7,30 @@
  * data (profiles, registry, caches) be reviewed in one place.
  */
 
+/**
+ * Declares where persistent runtime session data lives in the project
+ * workspace (`workspacePath`), and optionally redirects a path inside the
+ * guest to that location via a symlink (`guestSymlink`).
+ */
+export interface SessionMount {
+  /**
+   * Workspace-relative path for persistent session data; survives VM rebuilds.
+   *
+   * Trailing-slash convention:
+   *   - Ends with `/`  → treated as a **directory**: the directory itself is
+   *                      created with `mkdir -p` on both host and guest.
+   *   - No trailing `/` → treated as a **file path**: only the parent directory
+   *                      is created; the file itself is the agent tool's
+   *                      responsibility (it does not exist on VM creation).
+   */
+  workspacePath: string;
+  guestSymlink?: string;
+}
+
 export interface ConfigMount {
   source: string;
   name: string;
   guestTarget: string;
-  sessions?: {
-    /**
-     * Workspace-relative path for persistent session data; survives VM rebuilds.
-     *
-     * Trailing-slash convention:
-     *   - Ends with `/`  → treated as a **directory**: the directory itself is
-     *                      created with `mkdir -p` on both host and guest.
-     *   - No trailing `/` → treated as a **file path**: only the parent directory
-     *                      is created; the file itself is the agent tool's
-     *                      responsibility (it does not exist on VM creation).
-     */
-    workspacePath: string;
-    guestSymlink?: string;
-  };
   exfiltrateExcludes?: string[];
   driftDetectionExcludes?: string[];
 }
@@ -33,6 +39,7 @@ export interface EnvConfig {
   defaultCmd?: string;
   shellEnvAllowlist: string[];
   configMounts: ConfigMount[];
+  sessions: SessionMount[];
 }
 
 export interface Profile extends EnvConfig {

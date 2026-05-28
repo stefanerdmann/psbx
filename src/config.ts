@@ -18,7 +18,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import YAML from 'yaml';
-import type { AppConfig, ConfigMount, EnvConfig, Profile } from './types.ts';
+import type { AppConfig, ConfigMount, EnvConfig, Profile, SessionMount } from './types.ts';
 import { isPlainObject } from './utils.ts';
 
 const DEFAULT_CONFIG: AppConfig = {
@@ -160,27 +160,6 @@ function validateEnv(parsed: unknown, label: string): EnvConfig {
 
     const normalized: ConfigMount = { source, name, guestTarget };
 
-    const sessions = mount.sessions;
-    if (sessions !== undefined) {
-      if (typeof sessions !== 'object' || sessions === null) {
-        throw new Error(`${label}: configMounts[${idx}].sessions must be an object`);
-      }
-      const workspacePath = (sessions as Record<string, unknown>).workspacePath;
-      if (typeof workspacePath !== 'string' || !workspacePath) {
-        throw new Error(
-          `${label}: configMounts[${idx}].sessions.workspacePath must be a non-empty string`,
-        );
-      }
-      assertRelativeSubpath(workspacePath, `${label}: configMounts[${idx}].sessions.workspacePath`);
-      const guestSymlink = (sessions as Record<string, unknown>).guestSymlink;
-      if (guestSymlink !== undefined && (typeof guestSymlink !== 'string' || !guestSymlink)) {
-        throw new Error(
-          `${label}: configMounts[${idx}].sessions.guestSymlink must be a non-empty string`,
-        );
-      }
-      normalized.sessions = { workspacePath, ...(guestSymlink ? { guestSymlink } : {}) };
-    }
-
     const exfiltrateExcludes = mount.exfiltrateExcludes;
     if (exfiltrateExcludes !== undefined) {
       if (
@@ -222,7 +201,31 @@ function validateEnv(parsed: unknown, label: string): EnvConfig {
     return normalized;
   });
 
-  return { defaultCmd, shellEnvAllowlist, configMounts };
+  const rawSessions = envData.sessions;
+  let sessions: SessionMount[] = [];
+  if (rawSessions !== undefined && rawSessions !== null) {
+    if (!Array.isArray(rawSessions)) {
+      throw new Error(`${label}: sessions must be an array`);
+    }
+    sessions = rawSessions.map((entry, idx): SessionMount => {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+        throw new Error(`${label}: sessions[${idx}] must be an object`);
+      }
+      const sess = entry as Record<string, unknown>;
+      const workspacePath = sess.workspacePath;
+      if (typeof workspacePath !== 'string' || !workspacePath) {
+        throw new Error(`${label}: sessions[${idx}].workspacePath must be a non-empty string`);
+      }
+      assertRelativeSubpath(workspacePath, `${label}: sessions[${idx}].workspacePath`);
+      const guestSymlink = sess.guestSymlink;
+      if (guestSymlink !== undefined && (typeof guestSymlink !== 'string' || !guestSymlink)) {
+        throw new Error(`${label}: sessions[${idx}].guestSymlink must be a non-empty string`);
+      }
+      return { workspacePath, ...(guestSymlink ? { guestSymlink } : {}) };
+    });
+  }
+
+  return { defaultCmd, shellEnvAllowlist, configMounts, sessions };
 }
 
 function loadEnv(profileDir: string): EnvConfig {
@@ -259,7 +262,7 @@ function resolveProfile(config: AppConfig, profileNameOverride?: string | null):
     );
   }
 
-  const { defaultCmd, shellEnvAllowlist, configMounts } = loadEnv(dir);
+  const { defaultCmd, shellEnvAllowlist, configMounts, sessions } = loadEnv(dir);
 
   return {
     name,
@@ -268,6 +271,7 @@ function resolveProfile(config: AppConfig, profileNameOverride?: string | null):
     defaultCmd,
     shellEnvAllowlist,
     configMounts,
+    sessions,
   };
 }
 

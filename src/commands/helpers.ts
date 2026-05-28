@@ -227,18 +227,22 @@ function hashDefaultCmd(profile: Profile): string {
 /**
  * Hash of the profile inputs the finalizer consumes. A mismatch means
  * either the contents of a configMount's source dir changed, or
- * sessions.workspacePath / sessions.guestSymlink / guestTarget were edited. Add / remove / rename of
- * mounts also flips this hash, but those changes additionally flip
- * `limaConfigHash`, which routes the operation through a full recreate.
+ * sessions[].workspacePath / sessions[].guestSymlink / guestTarget were
+ * edited. Add / remove / rename of mounts also flips this hash, but those
+ * changes additionally flip `limaConfigHash`, which routes the operation
+ * through a full recreate.
  */
-function hashFinalizerConfig(profile: Profile): string {
+function hashFinalizerConfig(profile: Pick<Profile, 'configMounts' | 'sessions' | 'dir'>): string {
   const hash = createHash('sha256');
   const canonical = JSON.stringify({
     configMounts: (profile.configMounts || []).map((m) => ({
       source: m.source,
       name: m.name,
       guestTarget: m.guestTarget,
-      sessions: m.sessions ?? null,
+    })),
+    sessions: (profile.sessions || []).map((s) => ({
+      workspacePath: s.workspacePath,
+      guestSymlink: s.guestSymlink ?? null,
     })),
   });
   hash.update(canonical);
@@ -357,13 +361,11 @@ function assertSafeAgentDir(projectDir: string): void {
 
 function prepareProjectState(profile: Profile, projectDir: string): void {
   assertSafeAgentDir(projectDir);
-  for (const mount of profile.configMounts) {
-    if (mount.sessions) {
-      // Trailing slash → directory; no trailing slash → file (create parent only).
-      mkdirSync(join(projectDir, workspaceMkdirTarget(mount.sessions.workspacePath)), {
-        recursive: true,
-      });
-    }
+  for (const session of profile.sessions || []) {
+    // Trailing slash → directory; no trailing slash → file (create parent only).
+    mkdirSync(join(projectDir, workspaceMkdirTarget(session.workspacePath)), {
+      recursive: true,
+    });
   }
 }
 

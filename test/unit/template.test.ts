@@ -138,8 +138,8 @@ type RunOptions = {
   env?: Record<string, string>;
 };
 
-type RenderProfile = Pick<Profile, 'name' | 'dir' | 'limaPath' | 'configMounts'>;
-type InstanceProfile = Pick<Profile, 'name' | 'dir' | 'configMounts'>;
+type RenderProfile = Pick<Profile, 'name' | 'dir' | 'limaPath' | 'configMounts' | 'sessions'>;
+type InstanceProfile = Pick<Profile, 'name' | 'dir' | 'configMounts' | 'sessions'>;
 type MountedLimaConfig = LimaConfig & { mounts: LimaMount[] };
 type ParsedInstanceConfig = MountedLimaConfig & {
   base?: string;
@@ -220,9 +220,9 @@ describe('buildLimaConfig', { concurrency: false }, () => {
             source: 'pi/agent',
             name: 'agent',
             guestTarget: '~/.pi/agent',
-            sessions: { workspacePath: '.agents/sessions' },
           },
         ],
+        sessions: [{ workspacePath: '.agents/sessions' }],
       };
 
       const cacheConfig = buildCacheLimaConfig(profile, projectDir) as LimaConfig;
@@ -275,6 +275,7 @@ describe('buildLimaConfig', { concurrency: false }, () => {
             guestTarget: '~/.copilot',
           },
         ],
+        sessions: [],
       };
 
       const config = YAML.parse(

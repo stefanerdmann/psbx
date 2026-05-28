@@ -5,10 +5,10 @@
  *
  *   1. `CLONE_IDENTITY_FINALIZER` + `profileConfigFinalizerScript()` — run
  *      on every project VM after clone/create. Materializes profile config
- *      mounts into the guest home, applies per-mount fix-ups (e.g. tighten
- *      `auth.json` perms, symlink agent session directories into the
- *      project via the `sessions.guestSymlink` config), and on a
- *      cloned VM regenerates SSH host keys once.
+ *      mounts into the guest home, creates session directories, and
+ *      symlinks session paths into the project workdir via the
+ *      `sessions[].guestSymlink` config. On a cloned VM also regenerates
+ *      SSH host keys once.
  *
  *   2. `CACHE_SYSPREP_SCRIPT` — runs once at the end of cache provisioning
  *      to strip clone-unsafe identity (machine-id, SSH host keys) and
@@ -28,21 +28,21 @@ function guestProjectPath(relativePath: string): string {
   return `${GUEST_WORKDIR}/${relativePath.replace(/^\.?\//, '')}`;
 }
 
-function profileConfigFinalizerScript(profile: Profile): string {
+function profileConfigFinalizerScript(profile: Pick<Profile, 'configMounts' | 'sessions'>): string {
   const lines: string[] = [
     'set -eu',
     `until mountpoint -q ${shellQuote(GUEST_WORKDIR)}; do sleep 1; done`,
   ];
 
-  for (const mount of profile.configMounts || []) {
-    if (mount.sessions) {
-      // Trailing slash → directory; no trailing slash → file (create parent only).
-      lines.push(
-        `mkdir -p ${shellQuote(guestProjectPath(workspaceMkdirTarget(mount.sessions.workspacePath)))}`,
-      );
-    }
+  // Pass 1: mkdir workdir session dirs
+  for (const session of profile.sessions || []) {
+    // Trailing slash → directory; no trailing slash → file (create parent only).
+    lines.push(
+      `mkdir -p ${shellQuote(guestProjectPath(workspaceMkdirTarget(session.workspacePath)))}`,
+    );
   }
 
+  // Pass 2: copy all config mounts
   for (const mount of profile.configMounts || []) {
     const source = mountPointFor(mount);
     const target = expandGuestHome(mount.guestTarget);
@@ -50,10 +50,13 @@ function profileConfigFinalizerScript(profile: Profile): string {
     lines.push(
       `if [ -d ${shellQuote(`${source}/.`)} ]; then cp -a ${shellQuote(`${source}/.`)} ${shellQuote(target)}; fi`,
     );
+  }
 
-    if (mount.sessions && mount.sessions.guestSymlink) {
-      const sessionTarget = guestProjectPath(mount.sessions.workspacePath);
-      const symlinkPath = expandGuestHome(mount.sessions.guestSymlink);
+  // Pass 3: create all session symlinks
+  for (const session of profile.sessions || []) {
+    if (session.guestSymlink) {
+      const sessionTarget = guestProjectPath(session.workspacePath);
+      const symlinkPath = expandGuestHome(session.guestSymlink);
       lines.push(`rm -rf ${shellQuote(symlinkPath)}`);
       lines.push(`mkdir -p ${shellQuote(symlinkPath.replace(/\/[^/]+$/, ''))}`);
       lines.push(`ln -sfn ${shellQuote(sessionTarget)} ${shellQuote(symlinkPath)}`);

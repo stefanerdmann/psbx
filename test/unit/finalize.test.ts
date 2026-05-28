@@ -39,9 +39,9 @@ describe('profileConfigFinalizerScript', { concurrency: true }, () => {
           source: 'pi/agent',
           name: 'agent',
           guestTarget: '~/.pi/agent',
-          sessions: { workspacePath: '.agents/sessions', guestSymlink: '~/.pi/agents/sessions' },
         },
       ],
+      sessions: [{ workspacePath: '.agents/sessions', guestSymlink: '~/.pi/agents/sessions' }],
     });
     assert.ok(script.includes('/mnt/host-config/agent'));
     assert.ok(script.includes('/home/agent/workdir/.agents/sessions'));
@@ -56,10 +56,12 @@ describe('profileConfigFinalizerScript', { concurrency: true }, () => {
           source: 'copilot',
           name: 'copilot',
           guestTarget: '~/.copilot',
-          sessions: {
-            workspacePath: '.agents/copilot-sessions/session-state',
-            guestSymlink: '~/.copilot/session-state',
-          },
+        },
+      ],
+      sessions: [
+        {
+          workspacePath: '.agents/copilot-sessions/session-state',
+          guestSymlink: '~/.copilot/session-state',
         },
       ],
     });
@@ -87,10 +89,12 @@ describe('profileConfigFinalizerScript', { concurrency: true }, () => {
           source: 'pi',
           name: 'pi',
           guestTarget: '~/.pi',
-          sessions: {
-            workspacePath: '.agents/pi-sessions/',
-            guestSymlink: '~/.pi/agent/sessions/',
-          },
+        },
+      ],
+      sessions: [
+        {
+          workspacePath: '.agents/pi-sessions/',
+          guestSymlink: '~/.pi/agent/sessions/',
         },
       ],
     });
@@ -102,7 +106,7 @@ describe('profileConfigFinalizerScript', { concurrency: true }, () => {
   });
 
   it('handles empty configMounts', () => {
-    const script = profileConfigFinalizerScript({ configMounts: [] });
+    const script = profileConfigFinalizerScript({ configMounts: [], sessions: [] });
     assert.ok(script.includes('set -eu'));
     assert.ok(script.includes('mountpoint'));
   });

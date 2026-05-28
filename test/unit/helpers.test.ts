@@ -172,16 +172,16 @@ describe('detectMismatches', { concurrency: true }, () => {
   });
 
   it('does NOT flag finalizer drift as a recreate-worthy mismatch (handled in-place by up)', () => {
-    const originalProfile: Pick<Profile, 'name' | 'configMounts'> = {
+    const originalProfile: Pick<Profile, 'name' | 'configMounts' | 'sessions'> = {
       name: 'default',
       configMounts: [
         {
           source: 'agent',
           name: 'agent',
           guestTarget: '~/.pi/agent',
-          sessions: { workspacePath: '.agents/sessions' },
         },
       ],
+      sessions: [{ workspacePath: '.agents/sessions' }],
     };
     const result = detectMismatches({
       existsAsVm: true,
@@ -197,9 +197,9 @@ describe('detectMismatches', { concurrency: true }, () => {
             source: 'agent',
             name: 'agent',
             guestTarget: '~/.pi/agent-next',
-            sessions: { workspacePath: '.agents/sessions' },
           },
         ],
+        sessions: [{ workspacePath: '.agents/sessions' }],
       },
       projectDir: '/tmp',
     });
@@ -234,9 +234,9 @@ describe('detectMismatches', { concurrency: true }, () => {
             source: 'pi/agent',
             name: 'agent',
             guestTarget: '~/.pi/agent',
-            sessions: { workspacePath: '.agents/sessions' },
           },
         ],
+        sessions: [{ workspacePath: '.agents/sessions' }],
       };
       writeFileSync(settingsPath, '{"before":true}\n');
       const finalizerHash = hashFinalizerConfig(profile);
@@ -395,9 +395,9 @@ describe('cache invalidation helpers', { concurrency: true }, () => {
             source: 'pi/agent',
             name: 'agent',
             guestTarget: '~/.pi/agent',
-            sessions: { workspacePath: '.agents/sessions' },
           },
         ],
+        sessions: [{ workspacePath: '.agents/sessions' }],
       };
       writeFileSync(settingsPath, '{"one":true}\n');
       const first = hashFinalizerConfig({ ...env, dir: profileDir });
@@ -420,9 +420,9 @@ describe('cache invalidation helpers', { concurrency: true }, () => {
             source: 'pi/agent',
             name: 'agent',
             guestTarget: '~/.pi/agent',
-            sessions: { workspacePath: '.agents/sessions' },
           },
         ],
+        sessions: [{ workspacePath: '.agents/sessions' }],
       };
       writeFileSync(settingsPath, '{"one":true}\n');
       chmodSync(settingsPath, 0o600);
@@ -446,9 +446,9 @@ describe('cache invalidation helpers', { concurrency: true }, () => {
             source: 'pi/agent',
             name: 'agent',
             guestTarget: '~/.pi/agent',
-            sessions: { workspacePath: '.agents/sessions' },
           },
         ],
+        sessions: [{ workspacePath: '.agents/sessions' }],
       };
       writeFileSync(join(configDir, 'one.json'), '{"one":true}\n');
       writeFileSync(join(configDir, 'two.json'), '{"two":true}\n');

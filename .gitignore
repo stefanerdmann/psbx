@@ -4,3 +4,4 @@ legacy/
 .agents/
 .psbx/.DS_Store
 dist/
+plans/
