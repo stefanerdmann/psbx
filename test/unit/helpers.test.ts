@@ -260,6 +260,92 @@ describe('detectMismatches', { concurrency: true }, () => {
 });
 
 // ---------------------------------------------------------------------------
+// hashFinalizerConfig – driftDetectionExcludes
+// ---------------------------------------------------------------------------
+
+describe('hashFinalizerConfig driftDetectionExcludes', { concurrency: true }, () => {
+  it('ignores excluded paths when hashing', () => {
+    const profileDir = mkdtempSync(join(tmpdir(), 'psbx-exclude-'));
+    try {
+      mkdirSync(join(profileDir, 'pi', 'agent', 'npm', 'node_modules', 'pkg'), {
+        recursive: true,
+      });
+      writeFileSync(join(profileDir, 'pi', 'agent', 'settings.json'), '{"a":1}\n');
+      writeFileSync(
+        join(profileDir, 'pi', 'agent', 'npm', 'node_modules', 'pkg', 'index.js'),
+        'v1',
+      );
+
+      const profile = {
+        name: 'default',
+        dir: profileDir,
+        configMounts: [
+          {
+            source: 'pi/agent',
+            name: 'agent',
+            guestTarget: '~/.pi/agent',
+            driftDetectionExcludes: ['npm/node_modules'],
+          },
+        ],
+      };
+
+      const hash1 = hashFinalizerConfig(profile);
+
+      // Mutate an excluded file — hash must stay the same
+      writeFileSync(
+        join(profileDir, 'pi', 'agent', 'npm', 'node_modules', 'pkg', 'index.js'),
+        'v2',
+      );
+      const hash2 = hashFinalizerConfig(profile);
+      assert.strictEqual(hash1, hash2);
+
+      // Mutate a non-excluded file — hash must change
+      writeFileSync(join(profileDir, 'pi', 'agent', 'settings.json'), '{"a":2}\n');
+      const hash3 = hashFinalizerConfig(profile);
+      assert.notStrictEqual(hash1, hash3);
+    } finally {
+      rmSync(profileDir, { recursive: true, force: true });
+    }
+  });
+
+  it('produces a different hash than having no excludes', () => {
+    const profileDir = mkdtempSync(join(tmpdir(), 'psbx-exclude-diff-'));
+    try {
+      mkdirSync(join(profileDir, 'pi', 'agent', 'npm', 'node_modules'), { recursive: true });
+      writeFileSync(join(profileDir, 'pi', 'agent', 'npm', 'node_modules', 'a.js'), 'x');
+
+      const base = {
+        name: 'default',
+        dir: profileDir,
+        configMounts: [
+          {
+            source: 'pi/agent',
+            name: 'agent',
+            guestTarget: '~/.pi/agent',
+          },
+        ],
+      };
+
+      const withExcludes = {
+        ...base,
+        configMounts: [
+          {
+            ...base.configMounts[0],
+            driftDetectionExcludes: ['npm/node_modules'],
+          },
+        ],
+      };
+
+      const hashWithout = hashFinalizerConfig(base);
+      const hashWith = hashFinalizerConfig(withExcludes);
+      assert.notStrictEqual(hashWithout, hashWith);
+    } finally {
+      rmSync(profileDir, { recursive: true, force: true });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
 // cache invalidation helpers (migrated from static.test.js)
 // ---------------------------------------------------------------------------
 

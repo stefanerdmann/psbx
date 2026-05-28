@@ -190,6 +190,25 @@ function validateEnv(parsed: unknown, label: string): EnvConfig {
       normalized.exfiltrateExcludes = [...exfiltrateExcludes];
     }
 
+    const driftDetectionExcludes = mount.driftDetectionExcludes;
+    if (driftDetectionExcludes !== undefined) {
+      if (
+        !Array.isArray(driftDetectionExcludes) ||
+        driftDetectionExcludes.some((s) => typeof s !== 'string' || !s)
+      ) {
+        throw new Error(
+          `${label}: configMounts[${idx}].driftDetectionExcludes must be an array of non-empty strings`,
+        );
+      }
+      for (const [excludeIdx, exclude] of driftDetectionExcludes.entries()) {
+        assertRelativeSubpath(
+          exclude,
+          `${label}: configMounts[${idx}].driftDetectionExcludes[${excludeIdx}]`,
+        );
+      }
+      normalized.driftDetectionExcludes = [...driftDetectionExcludes];
+    }
+
     return normalized;
   });
 

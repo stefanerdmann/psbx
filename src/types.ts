@@ -14,6 +14,7 @@ export interface ConfigMount {
   projectSessionDir?: string;
   sessionSymlink?: string;
   exfiltrateExcludes?: string[];
+  driftDetectionExcludes?: string[];
 }
 
 export interface EnvConfig {

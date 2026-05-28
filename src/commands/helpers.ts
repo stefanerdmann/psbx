@@ -65,6 +65,7 @@ interface StopIfRunningOptions {
 
 interface HashProfilePathOptions {
   followSymlink?: boolean;
+  excludes?: Set<string>;
 }
 
 interface ProvisionVmOptions {
@@ -247,7 +248,12 @@ function hashFinalizerConfig(profile: Profile): string {
       hash.update('\0config-mount\0');
       hash.update(mount.name);
       hash.update('\0');
-      hashProfilePath(hash, join(profile.dir, mount.source), mount.source, new Set());
+      const excludes = new Set(
+        (mount.driftDetectionExcludes || []).map((e) => `${mount.source}/${e}`),
+      );
+      hashProfilePath(hash, join(profile.dir, mount.source), mount.source, new Set(), {
+        excludes,
+      });
     }
   }
 
@@ -275,8 +281,13 @@ function hashProfilePath(
   path: string,
   relativePath: string,
   seen: Set<string>,
-  { followSymlink = true }: HashProfilePathOptions = {},
+  { followSymlink = true, excludes }: HashProfilePathOptions = {},
 ): void {
+  if (excludes?.has(relativePath)) {
+    hash.update(`${relativePath}\0excluded`);
+    return;
+  }
+
   let lst: Stats;
   try {
     lst = lstatSync(path);
@@ -304,6 +315,7 @@ function hashProfilePath(
     for (const name of readdirSync(path).sort()) {
       hashProfilePath(hash, join(path, name), `${relativePath}/${name}`, seen, {
         followSymlink: false,
+        excludes,
       });
     }
     seen.delete(realPath);

@@ -207,6 +207,66 @@ describe('validateEnv', { concurrency: true }, () => {
     );
   });
 
+  it('accepts valid driftDetectionExcludes', () => {
+    const result = validateEnv(
+      {
+        configMounts: [
+          {
+            source: 'pi/agent',
+            name: 'agent',
+            guestTarget: '~/.pi/agent',
+            driftDetectionExcludes: ['npm/node_modules', 'cache'],
+          },
+        ],
+      },
+      'env',
+    );
+    assert.deepStrictEqual(result.configMounts[0].driftDetectionExcludes, [
+      'npm/node_modules',
+      'cache',
+    ]);
+  });
+
+  it('rejects driftDetectionExcludes that escape mount', () => {
+    assert.throws(
+      () =>
+        validateEnv(
+          {
+            configMounts: [
+              {
+                source: 'pi/agent',
+                name: 'agent',
+                guestTarget: '~/.pi/agent',
+                driftDetectionExcludes: ['../outside'],
+              },
+            ],
+          },
+          'env',
+        ),
+      /relative path/,
+    );
+  });
+
+  it('rejects non-array driftDetectionExcludes', () => {
+    assert.throws(
+      () =>
+        validateEnv(
+          {
+            configMounts: [
+              {
+                source: 'pi/agent',
+                name: 'agent',
+                guestTarget: '~/.pi/agent',
+                driftDetectionExcludes: 'not-an-array',
+              },
+            ],
+          },
+          'env',
+        ),
+      /driftDetectionExcludes must be an array/,
+    );
+  });
+
   it('filters non-string entries from shellEnvAllowlist', () => {
     const result: EnvConfig = validateEnv(
       {
