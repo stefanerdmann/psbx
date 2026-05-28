@@ -5,7 +5,7 @@
  */
 
 export const DESCRIPTION =
-  "Snapshot the current project VM's profile (plus exfiltrated guest config) into a new profile and rebase the VM onto it";
+  "Snapshot the current project VM's profile (plus exfiltrated guest config) into a new profile and rebase the VM onto it (pass --no-rebase to skip the rebase)";
 
 import { cpSync, existsSync, mkdirSync, mkdtempSync, renameSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -74,7 +74,14 @@ function exfiltrateConfigMounts(
 
 export { exfiltrateConfigMounts };
 
-export async function profileFork(newProfileName: string | undefined): Promise<void> {
+export interface ProfileForkOptions {
+  rebase?: boolean;
+}
+
+export async function profileFork(
+  newProfileName: string | undefined,
+  options: ProfileForkOptions = {},
+): Promise<void> {
   try {
     if (!newProfileName) {
       throw new Error('New profile name is required. Usage: psbx profile fork <new-profile>');
@@ -136,25 +143,33 @@ export async function profileFork(newProfileName: string | undefined): Promise<v
       throw err;
     }
 
-    // Resolve the freshly created profile so finalizerHash reflects the
-    // exfiltrated contents.
-    const newProfile: Profile = resolveProfile(config, newProfileName);
-
-    registerVm(vmName, {
-      ...entry,
-      profile: newProfileName,
-      // Cache name/key are unchanged: cacheKey is derived from the rendered
-      // lima.yaml, which we just copied verbatim.
-      ...profileHashes(newProfile, entry.projectDir),
-      // finalizerStatus stays 'done' — the running guest already reflects
-      // the exfiltrated contents (we copied them out of it).
-      finalizerStatus: 'done',
-      finalizerHash: hashFinalizerConfig(newProfile),
-    });
-
     console.log(`Created profile "${newProfileName}" at ${targetDir}`);
-    console.log(`Rebased sandbox '${vmName}' onto profile "${newProfileName}".`);
-    console.log('No restart required. Edit the new profile to evolve it independently.');
+
+    if (options.rebase !== false) {
+      // Resolve the freshly created profile so finalizerHash reflects the
+      // exfiltrated contents.
+      const newProfile: Profile = resolveProfile(config, newProfileName);
+
+      registerVm(vmName, {
+        ...entry,
+        profile: newProfileName,
+        // Cache name/key are unchanged: cacheKey is derived from the rendered
+        // lima.yaml, which we just copied verbatim.
+        ...profileHashes(newProfile, entry.projectDir),
+        // finalizerStatus stays 'done' — the running guest already reflects
+        // the exfiltrated contents (we copied them out of it).
+        finalizerStatus: 'done',
+        finalizerHash: hashFinalizerConfig(newProfile),
+      });
+
+      console.log(`Rebased sandbox '${vmName}' onto profile "${newProfileName}".`);
+      console.log('No restart required. Edit the new profile to evolve it independently.');
+    } else {
+      console.log(`Sandbox '${vmName}' remains on profile "${entry.profile}" (--no-rebase).`);
+      console.log(
+        `Edit the new profile independently and switch with \`psbx up --profile ${newProfileName}\`.`,
+      );
+    }
   } catch (err: unknown) {
     handleError(err);
   }

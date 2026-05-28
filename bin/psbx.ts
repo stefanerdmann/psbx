@@ -50,6 +50,7 @@ import {
 import { DESCRIPTION as LOGS_DESCRIPTION, logs } from '../src/commands/logs.ts';
 import {
   DESCRIPTION as PROFILE_FORK_DESCRIPTION,
+  type ProfileForkOptions,
   profileFork,
 } from '../src/commands/profile-fork.ts';
 import {
@@ -247,7 +248,11 @@ profileCmd
 profileCmd
   .command('fork <new-profile>')
   .description(PROFILE_FORK_DESCRIPTION)
-  .action((newProfile: string): Promise<void> => profileFork(newProfile));
+  .option('--no-rebase', 'Create the new profile snapshot but keep the VM on its current profile')
+  .action(
+    (newProfile: string, options: ProfileForkOptions): Promise<void> =>
+      profileFork(newProfile, options),
+  );
 
 profileCmd
   .command('rename <src> <dest>')

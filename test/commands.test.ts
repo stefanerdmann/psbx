@@ -1192,4 +1192,117 @@ process.exit(1);
     assert.strictEqual(r.status, 0);
     assert.ok(r.stdout.includes('No registered sandboxes to delete'), `stdout: ${r.stdout}`);
   });
+
+  // --- profile fork ---
+
+  it('[cmd] profile fork exits 1 when no registry entry exists for the VM', () => {
+    const home = mkdtempSync(join(tmpdir(), 'psbx-fork-noentry-'));
+    const project = mkdtempSync(join(tmpdir(), 'psbx-fork-noentry-proj-'));
+    try {
+      run(['profile', 'init', 'self-test', '--self-test'], { HOME: home, cwd: project });
+      // deliberately no writeRegistry call
+      const r = run(['profile', 'fork', 'new-profile'], { HOME: home, cwd: project });
+      assert.strictEqual(r.status, 1);
+      assert.ok(r.stderr.includes('No registry entry'), `stderr: ${r.stderr}`);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+      rmSync(project, { recursive: true, force: true });
+    }
+  });
+
+  it('[cmd] profile fork exits 1 when VM is not running', () => {
+    const home = mkdtempSync(join(tmpdir(), 'psbx-fork-stopped-'));
+    const project = mkdtempSync(join(tmpdir(), 'psbx-fork-stopped-proj-'));
+    try {
+      run(['profile', 'init', 'self-test', '--self-test'], { HOME: home, cwd: project });
+      const vmName = vmNameFrom(project);
+      writeRegistry(home, project, { profile: 'self-test' });
+      const fake = writeFakeLimactl({
+        [vmName]: { name: vmName, status: 'Stopped', config: {} },
+      });
+      const env = {
+        PATH: `${fake.binDir}:${process.env.PATH}`,
+        PI_TEST_LIMA_STATE: fake.statePath,
+      };
+      const r = run(['profile', 'fork', 'new-profile'], { HOME: home, cwd: project, env });
+      assert.strictEqual(r.status, 1);
+      assert.ok(r.stderr.includes('must be running'), `stderr: ${r.stderr}`);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+      rmSync(project, { recursive: true, force: true });
+    }
+  });
+
+  it('[cmd] profile fork creates profile and rebases VM by default', () => {
+    const home = mkdtempSync(join(tmpdir(), 'psbx-fork-rebase-'));
+    const project = mkdtempSync(join(tmpdir(), 'psbx-fork-rebase-proj-'));
+    try {
+      run(['profile', 'init', 'self-test', '--self-test'], { HOME: home, cwd: project });
+      const vmName = vmNameFrom(project);
+      writeRegistry(home, project, { profile: 'self-test' });
+      const fake = writeFakeLimactl({
+        [vmName]: { name: vmName, status: 'Running', config: {} },
+      });
+      const env = {
+        PATH: `${fake.binDir}:${process.env.PATH}`,
+        PI_TEST_LIMA_STATE: fake.statePath,
+      };
+      const r = run(['profile', 'fork', 'forked'], { HOME: home, cwd: project, env });
+      assert.strictEqual(r.status, 0, `stderr: ${r.stderr}`);
+      // New profile directory was created
+      assert.ok(
+        existsSync(join(home, '.psbx', 'profiles', 'forked')),
+        'forked profile dir should exist',
+      );
+      // Registry was rebased onto the new profile
+      const cfg = JSON.parse(
+        readFileSync(join(home, '.psbx', 'config.json'), 'utf-8'),
+      ) as ConfigFileData;
+      assert.strictEqual(cfg.vms?.[vmName]?.profile, 'forked');
+      assert.ok(r.stdout.includes('Rebased'), `expected 'Rebased' in stdout: ${r.stdout}`);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+      rmSync(project, { recursive: true, force: true });
+    }
+  });
+
+  it('[cmd] profile fork --no-rebase creates profile but keeps VM on original profile', () => {
+    const home = mkdtempSync(join(tmpdir(), 'psbx-fork-norebase-'));
+    const project = mkdtempSync(join(tmpdir(), 'psbx-fork-norebase-proj-'));
+    try {
+      run(['profile', 'init', 'self-test', '--self-test'], { HOME: home, cwd: project });
+      const vmName = vmNameFrom(project);
+      writeRegistry(home, project, { profile: 'self-test' });
+      const fake = writeFakeLimactl({
+        [vmName]: { name: vmName, status: 'Running', config: {} },
+      });
+      const env = {
+        PATH: `${fake.binDir}:${process.env.PATH}`,
+        PI_TEST_LIMA_STATE: fake.statePath,
+      };
+      const r = run(['profile', 'fork', 'forked', '--no-rebase'], {
+        HOME: home,
+        cwd: project,
+        env,
+      });
+      assert.strictEqual(r.status, 0, `stderr: ${r.stderr}`);
+      // New profile directory was created
+      assert.ok(
+        existsSync(join(home, '.psbx', 'profiles', 'forked')),
+        'forked profile dir should exist',
+      );
+      // Registry still points to the original profile (not rebased)
+      const cfg = JSON.parse(
+        readFileSync(join(home, '.psbx', 'config.json'), 'utf-8'),
+      ) as ConfigFileData;
+      assert.strictEqual(cfg.vms?.[vmName]?.profile, 'self-test');
+      assert.ok(
+        r.stdout.includes('remains on profile'),
+        `expected 'remains on profile' in stdout: ${r.stdout}`,
+      );
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+      rmSync(project, { recursive: true, force: true });
+    }
+  });
 });
