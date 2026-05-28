@@ -150,7 +150,10 @@ program
   .command('up')
   .description(UP_DESCRIPTION)
   .addHelpText('after', `\n${UP_HELP_TEXT}`)
-  .option('-p, --profile <name>', 'Use a specific profile')
+  .option(
+    '-p, --profile <name>',
+    'Override the profile (defaults to the profile recorded in the registry for existing VMs, or the global default for new ones)',
+  )
   .option('--shell', 'Open a plain shell instead of running the default command')
   .option('--only-create', 'Only create the VM (fail if it already exists)')
   .option('--only-recreate', 'Only recreate the VM (fail if it does not exist)')

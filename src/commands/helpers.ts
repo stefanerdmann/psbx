@@ -110,7 +110,12 @@ function resolveContext(
   };
 
   if (withProfile) {
-    context.profile = resolveProfile(config, options.profile);
+    // Sticky profile: if the user didn't explicitly specify --profile and
+    // a VM already exists for this workdir in the registry, use the
+    // profile recorded there instead of defaultProfile. This ensures
+    // `psbx up` always picks the profile the VM was created with.
+    const profileOverride = options.profile || (context.registryEntry?.profile ?? undefined);
+    context.profile = resolveProfile(config, profileOverride);
   }
 
   return context;

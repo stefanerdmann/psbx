@@ -25,7 +25,7 @@ shared psbx state settings. The top-level keys are:
 
 | Field | Purpose | Manage sub-commands | Inspection sub-commands |
 |---|---|---|---|
-| `defaultProfile` | Profile used by lifecycle commands when `--profile` is omitted | `profile set-default` | `profile list` |
+| `defaultProfile` | Profile used for new VMs when `--profile` is omitted (existing VMs use their recorded profile) | `profile set-default` | `profile list` |
 | `vms` | Registry of project VM metadata managed by psbx | `up`, `stop`, `restart`, `delete` | `list`, `status` |
 | `caches` | Registry of hidden profile cache VMs managed by psbx | `cache delete [--all]` | `cache list`, `cache status` |
 
@@ -114,7 +114,7 @@ shellEnvAllowlist:
 profile directory and project directory respectively; absolute paths and `..`
 segments are rejected.
 
-A default profile is set automatically when you create your first profile, or explicitly via `psbx profile set-default <profile-name>`. It is used when `psbx up` is called without an explicit `--profile` argument. The name of the default profile is stored in `~/.psbx/config.json`, alongside information about the currently created VMs that are under management of psbx.
+A default profile is set automatically when you create your first profile, or explicitly via `psbx profile set-default <profile-name>`. It is used when `psbx up` creates a **new** VM (i.e. no existing registry entry for the current project). For existing VMs, `psbx up` automatically uses the profile recorded in the registry entry ("sticky profile"), so you don't need to repeat `--profile` on every invocation. Pass `--profile <name>` explicitly to override this behavior and switch to a different profile. The name of the default profile is stored in `~/.psbx/config.json`, alongside information about the currently created VMs that are under management of psbx.
 
 Create a profile with:
 

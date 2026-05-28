@@ -1051,6 +1051,45 @@ process.exit(1);
     }
   });
 
+  it('[cmd] up without --profile uses registry profile (sticky) instead of default', () => {
+    const projDir = mkdtempSync(join(tmpdir(), 'psbx-sticky-'));
+    const home = mkdtempSync(join(tmpdir(), 'psbx-sticky-home-'));
+    try {
+      // Create two profiles: 'alpha' and 'beta'
+      run(['profile', 'init', 'alpha', '--self-test'], { HOME: home, cwd: projDir });
+      run(['profile', 'init', 'beta', '--from-profile', 'alpha'], { HOME: home, cwd: projDir });
+      // Set 'beta' as the global default
+      run(['profile', 'set-default', 'beta'], { HOME: home, cwd: projDir });
+
+      // Register the VM with profile 'alpha'
+      writeRegistry(home, projDir, { profile: 'alpha' });
+
+      // Fake limactl says no VM exists
+      const fake = writeFakeLimactl({});
+      const env = {
+        PATH: `${fake.binDir}:${process.env.PATH}`,
+        PI_TEST_LIMA_STATE: fake.statePath,
+      };
+
+      // Run `up` without --profile; sticky logic should resolve to 'alpha'
+      // (from registry), not 'beta' (default). Since the VM doesn't exist
+      // but registry entry does, it reports an inconsistency.
+      const r = run(['up'], { HOME: home, cwd: projDir, input: 'n\n', env });
+      // The reason should mention 'registry entry exists but VM does not' (not profile mismatch)
+      assert.ok(
+        !r.stdout.includes('profile:'),
+        `should NOT report a profile mismatch (sticky should use 'alpha'):\n${r.stdout}`,
+      );
+      assert.ok(
+        r.stdout.includes('registry entry exists but VM does not'),
+        `expected registry/VM mismatch reason:\n${r.stdout}`,
+      );
+    } finally {
+      rmSync(projDir, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
   // --- completion command tests ---
 
   it('[cmd] completion bash outputs a valid completion script', () => {
