@@ -91,7 +91,12 @@ function generateSchema(profileDir: string): void {
 }
 
 const DEFAULT_TEMPLATE = 'pi-in-ubuntu';
-const SHIPPED_TEMPLATES = new Set([DEFAULT_TEMPLATE, 'copilot-in-ubuntu', 'self-test']);
+const SHIPPED_TEMPLATES = new Set([
+  DEFAULT_TEMPLATE,
+  'copilot-in-ubuntu',
+  'opencode-in-ubuntu',
+  'self-test',
+]);
 
 /**
  * Derive the host-side config directory for a config mount by expanding its

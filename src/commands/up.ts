@@ -225,7 +225,7 @@ export async function up(options: UpOptions = {}): Promise<void> {
 
       // In-place re-finalize when finalizerHash drifted but limaConfigHash
       // still matches (mismatches were empty, so this is the case where
-      // configMounts source contents, sessions.workspaceDir, or guestTarget
+      // configMounts source contents, sessions.workspacePath, or guestTarget
       // sub-fields changed without altering the rendered lima.yaml).
       const newFinalizerHash = hashFinalizerConfig(profile);
       if (existingRegistryEntry.finalizerHash !== newFinalizerHash) {

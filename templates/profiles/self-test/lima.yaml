@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=./lima.schema.json
 user:
-  name: pi
-  home: /home/pi
+  name: agent
+  home: /home/agent
 base:
   - template:_images/alpine
 cpus: 2

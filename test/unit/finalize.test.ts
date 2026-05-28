@@ -39,29 +39,66 @@ describe('profileConfigFinalizerScript', { concurrency: true }, () => {
           source: 'pi/agent',
           name: 'agent',
           guestTarget: '~/.pi/agent',
-          sessions: { workspaceDir: '.agents/sessions', guestSymlink: '~/.pi/agents/sessions' },
+          sessions: { workspacePath: '.agents/sessions', guestSymlink: '~/.pi/agents/sessions' },
         },
       ],
     });
     assert.ok(script.includes('/mnt/host-config/agent'));
-    assert.ok(script.includes('/home/pi/workdir/.agents/sessions'));
+    assert.ok(script.includes('/home/agent/workdir/.agents/sessions'));
     assert.ok(!script.includes('/tmp/psbx-cache-profile'));
     assert.ok(!script.includes('/Users/alice/project'));
   });
 
-  it('creates session dirs for mounts with sessions.workspaceDir', () => {
+  it('creates session parent dir (mkdir of parent) when workspacePath is a file path (no trailing slash)', () => {
     const script = profileConfigFinalizerScript({
       configMounts: [
         {
           source: 'copilot',
           name: 'copilot',
           guestTarget: '~/.copilot',
-          sessions: { workspaceDir: '.agents/copilot-sessions/session-state', guestSymlink: '~/.copilot/session-state' },
+          sessions: {
+            workspacePath: '.agents/copilot-sessions/session-state',
+            guestSymlink: '~/.copilot/session-state',
+          },
+        },
+      ],
+    });
+    // mkdir must target the parent directory, not the file path itself
+    assert.ok(script.includes('mkdir -p'));
+    assert.ok(
+      script.includes(".agents/copilot-sessions'"),
+      `expected parent dir in mkdir; script:\n${script}`,
+    );
+    assert.ok(
+      !script.match(/mkdir -p '[^']*\.agents\/copilot-sessions\/session-state'/),
+      `must NOT mkdir the file path itself; script:\n${script}`,
+    );
+    // symlink target still points to the full workspacePath path
+    assert.ok(
+      script.includes('.agents/copilot-sessions/session-state'),
+      `expected full file path in symlink target; script:\n${script}`,
+    );
+  });
+
+  it('creates session dir directly when workspacePath is a directory path (trailing slash)', () => {
+    const script = profileConfigFinalizerScript({
+      configMounts: [
+        {
+          source: 'pi',
+          name: 'pi',
+          guestTarget: '~/.pi',
+          sessions: {
+            workspacePath: '.agents/pi-sessions/',
+            guestSymlink: '~/.pi/agent/sessions/',
+          },
         },
       ],
     });
     assert.ok(script.includes('mkdir -p'));
-    assert.ok(script.includes('.agents/copilot-sessions/session-state'));
+    assert.ok(
+      script.match(/mkdir -p '[^']*\.agents\/pi-sessions\//),
+      `expected dir path in mkdir; script:\n${script}`,
+    );
   });
 
   it('handles empty configMounts', () => {

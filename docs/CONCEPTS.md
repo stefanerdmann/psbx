@@ -13,7 +13,7 @@ psbx uses a profile-centered configuration hierarchy that separates
 │  Location: templates/profiles/<name>/               │
 │                                                     │
 │  Examples: pi-in-ubuntu, copilot-in-ubuntu,         │
-│            self-test                                 │
+│            opencode-in-ubuntu, self-test              │
 └────────────────────┬────────────────────────────────┘
                      │  psbx profile init <name>
                      │  --template <template>
@@ -58,6 +58,7 @@ Shipped profile templates:
 |---|---|---|
 | `pi-in-ubuntu` | `pi` | Ubuntu VM with pi agent configuration |
 | `copilot-in-ubuntu` | `copilot` | Ubuntu VM with GitHub Copilot CLI support |
+| `opencode-in-ubuntu` | `opencode` | Ubuntu VM with OpenCode CLI support |
 | `self-test` | _(none)_ | Lightweight Alpine VM for testing |
 
 ### Profile
@@ -75,6 +76,7 @@ A profile contains:
 | `env.yaml` | Runtime environment: default command, env var allowlist, config mounts |
 | `pi/agent/` | Pi agent configuration files (optional) |
 | `copilot/` | Copilot configuration files (optional) |
+| `opencode/` | OpenCode configuration files (optional) |
 
 Profiles are the right place for anything that should be **shared across
 projects** but **customizable per user**: agent auth tokens, editor settings,
@@ -185,7 +187,7 @@ forwarding no host env vars.
 | Profile change | Hash flipped | Action |
 |---|---|---|
 | `lima.yaml` fields; config mount add/remove/rename | `limaConfigHash` | recreate (with confirm prompt) |
-| config mount source contents; `sessions.workspaceDir`; `sessions.guestSymlink`; `guestTarget`; `source`; `name` of an existing mount | `finalizerHash` | re-run idempotent finalizer in place; no restart |
+| config mount source contents; `sessions.workspacePath`; `sessions.guestSymlink`; `guestTarget`; `source`; `name` of an existing mount | `finalizerHash` | re-run idempotent finalizer in place; no restart |
 | `configMounts[].exfiltrateExcludes` | — | read live at exfiltrate time |
 | `shellEnvAllowlist` | `shellEnvAllowlistHash` (informational) | none — read live by `exec` and `up` |
 | `defaultCmd` | `defaultCmdHash` (informational) | none — read live by `up` |

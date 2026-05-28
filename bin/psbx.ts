@@ -237,7 +237,7 @@ profileCmd
   .option('--from-profile <name>', 'Copy an existing profile')
   .option(
     '--template <name>',
-    'Use a shipped profile template (pi-in-ubuntu, self-test, copilot-in-ubuntu); defaults to pi-in-ubuntu',
+    'Use a shipped profile template (pi-in-ubuntu, self-test, copilot-in-ubuntu, opencode-in-ubuntu); defaults to pi-in-ubuntu',
   )
   .option('--self-test', 'Use the lightweight self-test profile template')
   .option('--copy-from-host', 'Copy ~/.pi/agent into the new profile')

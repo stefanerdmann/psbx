@@ -46,6 +46,7 @@ import {
   writeLimaYaml,
 } from '../template.ts';
 import type { LimaConfig, Profile, ProfileHashes, ResolveContextResult } from '../types.ts';
+import { workspaceMkdirTarget } from '../utils.ts';
 
 interface ResolveContextOptions {
   profile?: string;
@@ -226,7 +227,7 @@ function hashDefaultCmd(profile: Profile): string {
 /**
  * Hash of the profile inputs the finalizer consumes. A mismatch means
  * either the contents of a configMount's source dir changed, or
- * sessions.workspaceDir / sessions.guestSymlink / guestTarget were edited. Add / remove / rename of
+ * sessions.workspacePath / sessions.guestSymlink / guestTarget were edited. Add / remove / rename of
  * mounts also flips this hash, but those changes additionally flip
  * `limaConfigHash`, which routes the operation through a full recreate.
  */
@@ -358,7 +359,10 @@ function prepareProjectState(profile: Profile, projectDir: string): void {
   assertSafeAgentDir(projectDir);
   for (const mount of profile.configMounts) {
     if (mount.sessions) {
-      mkdirSync(join(projectDir, mount.sessions.workspaceDir), { recursive: true });
+      // Trailing slash → directory; no trailing slash → file (create parent only).
+      mkdirSync(join(projectDir, workspaceMkdirTarget(mount.sessions.workspacePath)), {
+        recursive: true,
+      });
     }
   }
 }

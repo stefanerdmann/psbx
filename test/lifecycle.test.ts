@@ -190,7 +190,7 @@ describe('lifecycle', {
     const r = run(['up', '--shell'], {
       HOME: tmpHome,
       cwd: projectDir,
-      input: 'echo smoke-enter-ok > /home/pi/workdir/smoke-enter.txt\nexit\n',
+      input: 'echo smoke-enter-ok > /home/agent/workdir/smoke-enter.txt\nexit\n',
       timeout: 30_000,
     });
     assert.strictEqual(r.status, 0, `stderr: ${r.stderr}`);
@@ -256,7 +256,7 @@ describe('lifecycle', {
         '--',
         '/bin/sh',
         '-c',
-        'echo from-vm-marker > /home/pi/.pi/agent/marker.txt',
+        'echo from-vm-marker > /home/agent/.pi/agent/marker.txt',
       ],
       { encoding: 'utf-8', timeout: 30_000, env: { ...process.env, HOME: tmpHome } },
     );
@@ -317,7 +317,7 @@ describe('lifecycle', {
     const r = run(['up', '--shell', '--profile', 'copied-from-vm'], {
       HOME: tmpHome,
       cwd: projectDir,
-      input: 'cat /home/pi/.pi/agent/marker.txt > /home/pi/workdir/smoke-up.txt\nexit\n',
+      input: 'cat /home/agent/.pi/agent/marker.txt > /home/agent/workdir/smoke-up.txt\nexit\n',
       timeout: 30 * 60 * 1000,
     });
     assert.strictEqual(r.status, 0, `stderr:\n${r.stderr}\nstdout:\n${r.stdout}`);

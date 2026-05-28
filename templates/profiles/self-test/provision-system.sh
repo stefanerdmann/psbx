@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-install -d -o pi -g pi /home/pi/.pi/agent
+install -d -o pi -g pi /home/agent/.pi/agent
 
 sed -i 's#https://dl-cdn.alpinelinux.org#http://dl-cdn.alpinelinux.org#g' /etc/apk/repositories
 apk update

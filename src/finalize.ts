@@ -22,7 +22,7 @@
 import { limaShellScript } from './lima.ts';
 import { expandGuestHome, GUEST_WORKDIR, mountPointFor } from './template.ts';
 import type { Profile } from './types.ts';
-import { shellQuote } from './utils.ts';
+import { shellQuote, workspaceMkdirTarget } from './utils.ts';
 
 function guestProjectPath(relativePath: string): string {
   return `${GUEST_WORKDIR}/${relativePath.replace(/^\.?\//, '')}`;
@@ -36,7 +36,10 @@ function profileConfigFinalizerScript(profile: Profile): string {
 
   for (const mount of profile.configMounts || []) {
     if (mount.sessions) {
-      lines.push(`mkdir -p ${shellQuote(guestProjectPath(mount.sessions.workspaceDir))}`);
+      // Trailing slash → directory; no trailing slash → file (create parent only).
+      lines.push(
+        `mkdir -p ${shellQuote(guestProjectPath(workspaceMkdirTarget(mount.sessions.workspacePath)))}`,
+      );
     }
   }
 
@@ -49,7 +52,7 @@ function profileConfigFinalizerScript(profile: Profile): string {
     );
 
     if (mount.sessions && mount.sessions.guestSymlink) {
-      const sessionTarget = guestProjectPath(mount.sessions.workspaceDir);
+      const sessionTarget = guestProjectPath(mount.sessions.workspacePath);
       const symlinkPath = expandGuestHome(mount.sessions.guestSymlink);
       lines.push(`rm -rf ${shellQuote(symlinkPath)}`);
       lines.push(`mkdir -p ${shellQuote(symlinkPath.replace(/\/[^/]+$/, ''))}`);

@@ -12,7 +12,17 @@ export interface ConfigMount {
   name: string;
   guestTarget: string;
   sessions?: {
-    workspaceDir: string;
+    /**
+     * Workspace-relative path for persistent session data; survives VM rebuilds.
+     *
+     * Trailing-slash convention:
+     *   - Ends with `/`  → treated as a **directory**: the directory itself is
+     *                      created with `mkdir -p` on both host and guest.
+     *   - No trailing `/` → treated as a **file path**: only the parent directory
+     *                      is created; the file itself is the agent tool's
+     *                      responsibility (it does not exist on VM creation).
+     */
+    workspacePath: string;
     guestSymlink?: string;
   };
   exfiltrateExcludes?: string[];

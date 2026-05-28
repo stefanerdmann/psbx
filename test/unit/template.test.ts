@@ -179,7 +179,7 @@ describe('buildLimaConfig', { concurrency: false }, () => {
       const mountPoints = config.mounts.map((m) => m.mountPoint).sort();
       assert.ok(mountPoints.includes('/mnt/host-config/copilot'), `mounts: ${mountPoints}`);
       assert.ok(
-        mountPoints.includes('/home/pi/workdir'),
+        mountPoints.includes('/home/agent/workdir'),
         `expected workdir mount, got: ${mountPoints}`,
       );
       assert.ok(
@@ -201,8 +201,8 @@ describe('buildLimaConfig', { concurrency: false }, () => {
         join(profileDir, 'lima.yaml'),
         [
           'user:',
-          '  name: pi',
-          '  home: /home/pi',
+          '  name: agent',
+          '  home: /home/agent',
           'provision:',
           '  - mode: system',
           '    file: ./provision-system.sh',
@@ -220,7 +220,7 @@ describe('buildLimaConfig', { concurrency: false }, () => {
             source: 'pi/agent',
             name: 'agent',
             guestTarget: '~/.pi/agent',
-            sessions: { workspaceDir: '.agents/sessions' },
+            sessions: { workspacePath: '.agents/sessions' },
           },
         ],
       };
@@ -230,11 +230,11 @@ describe('buildLimaConfig', { concurrency: false }, () => {
       assert.ok(
         !Array.isArray(cacheConfig.mounts) ||
           !cacheConfig.mounts.some((m) =>
-            ['/home/pi/workdir', '/mnt/host-config/agent'].includes(m.mountPoint),
+            ['/home/agent/workdir', '/mnt/host-config/agent'].includes(m.mountPoint),
           ),
         `cache mounts should not contain dynamic project/profile mounts: ${JSON.stringify(cacheConfig.mounts)}`,
       );
-      assert.ok(fullConfig.mounts.some((m) => m.mountPoint === '/home/pi/workdir'));
+      assert.ok(fullConfig.mounts.some((m) => m.mountPoint === '/home/agent/workdir'));
       assert.ok(fullConfig.mounts.some((m) => m.mountPoint === '/mnt/host-config/agent'));
     } finally {
       rmSync(profileDir, { recursive: true, force: true });
@@ -250,8 +250,8 @@ describe('buildLimaConfig', { concurrency: false }, () => {
       mkdirSync(configDir, { recursive: true });
       const instanceYaml = [
         'user:',
-        '  name: pi',
-        '  home: /home/pi',
+        '  name: agent',
+        '  home: /home/agent',
         'images:',
         '  - location: https://example.test/ubuntu.img',
         '    digest: "sha256:abc"',
@@ -289,7 +289,7 @@ describe('buildLimaConfig', { concurrency: false }, () => {
 
       const mounts = new Map(config.mounts.map((mount) => [mount.mountPoint, mount]));
       assert.strictEqual(mounts.get('/cache-only').location, '/cache-only');
-      assert.strictEqual(mounts.get('/home/pi/workdir').location, projectDir);
+      assert.strictEqual(mounts.get('/home/agent/workdir').location, projectDir);
       assert.strictEqual(mounts.get('/mnt/host-config/copilot').location, realpathSync(configDir));
     } finally {
       rmSync(profileDir, { recursive: true, force: true });

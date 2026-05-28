@@ -71,4 +71,21 @@ function packageRoot(): string {
   }
 }
 
-export { errorMessage, formatBytes, isPlainObject, packageRoot, shellQuote };
+/**
+ * Given a `sessions.workspacePath` value, return the directory path that
+ * must be created with `mkdir -p` on both the host and the guest.
+ *
+ * Semantics (trailing-slash convention):
+ *   - Trailing slash  → directory path → create it directly.
+ *   - No trailing slash → file path   → create only its parent directory;
+ *                                        the file itself is the agent tool's responsibility.
+ */
+function workspaceMkdirTarget(workspacePath: string): string {
+  if (workspacePath.endsWith('/')) {
+    return workspacePath;
+  }
+  const lastSlash = workspacePath.lastIndexOf('/');
+  return lastSlash >= 0 ? workspacePath.slice(0, lastSlash) : '.';
+}
+
+export { errorMessage, formatBytes, isPlainObject, packageRoot, shellQuote, workspaceMkdirTarget };

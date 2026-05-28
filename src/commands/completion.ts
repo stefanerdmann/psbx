@@ -86,7 +86,7 @@ _psbx() {
         COMPREPLY=( $(compgen -W "$(_psbx_profiles)" -- "\${cur}") )
         ;;
       --template)
-        COMPREPLY=( $(compgen -W "pi-in-ubuntu self-test copilot-in-ubuntu" -- "\${cur}") )
+        COMPREPLY=( $(compgen -W "pi-in-ubuntu self-test copilot-in-ubuntu opencode-in-ubuntu" -- "\${cur}") )
         ;;
     esac
     return 0
@@ -115,7 +115,7 @@ _psbx() {
       COMPREPLY=( $(compgen -W "--json" -- "\${cur}") )
       ;;
     --template)
-      COMPREPLY=( $(compgen -W "pi-in-ubuntu self-test copilot-in-ubuntu" -- "\${cur}") )
+      COMPREPLY=( $(compgen -W "pi-in-ubuntu self-test copilot-in-ubuntu opencode-in-ubuntu" -- "\${cur}") )
       ;;
     completion)
       COMPREPLY=( $(compgen -W "bash zsh fish" -- "\${cur}") )
@@ -172,7 +172,7 @@ _psbx_profile_commands() {
         init)
           _arguments \\
             '--from-profile[Copy an existing profile]:profile:_psbx_profiles' \\
-            '--template[Use a shipped profile template]:template:(pi-in-ubuntu self-test copilot-in-ubuntu)' \\
+            '--template[Use a shipped profile template]:template:(pi-in-ubuntu self-test copilot-in-ubuntu opencode-in-ubuntu)' \\
             '--self-test[Use the lightweight self-test profile template]' \\
             '--copy-from-host[Copy host config directories into the new profile]' \\
             '--symlink-from-host[Symlink host config directories into the new profile]' \\
@@ -385,7 +385,7 @@ complete -c psbx -n '__psbx_needs_profile_subcmd' -a edit -d 'Open a profile in 
 
 # profile init options
 complete -c psbx -n '__psbx_profile_subcmd init' -l from-profile -d 'Copy an existing profile' -r -a '(__psbx_profiles)'
-complete -c psbx -n '__psbx_profile_subcmd init' -l template -d 'Use a shipped profile template (pi-in-ubuntu, self-test, copilot-in-ubuntu)' -r -a 'pi-in-ubuntu self-test copilot-in-ubuntu'
+complete -c psbx -n '__psbx_profile_subcmd init' -l template -d 'Use a shipped profile template (pi-in-ubuntu, self-test, copilot-in-ubuntu, opencode-in-ubuntu)' -r -a 'pi-in-ubuntu self-test copilot-in-ubuntu opencode-in-ubuntu'
 complete -c psbx -n '__psbx_profile_subcmd init' -l self-test -d 'Use the lightweight self-test profile template'
 complete -c psbx -n '__psbx_profile_subcmd init' -l copy-from-host -d 'Copy host config directories into the new profile'
 complete -c psbx -n '__psbx_profile_subcmd init' -l symlink-from-host -d 'Symlink host config directories into the new profile'

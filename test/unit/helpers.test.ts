@@ -179,7 +179,7 @@ describe('detectMismatches', { concurrency: true }, () => {
           source: 'agent',
           name: 'agent',
           guestTarget: '~/.pi/agent',
-          sessions: { workspaceDir: '.agents/sessions' },
+          sessions: { workspacePath: '.agents/sessions' },
         },
       ],
     };
@@ -197,7 +197,7 @@ describe('detectMismatches', { concurrency: true }, () => {
             source: 'agent',
             name: 'agent',
             guestTarget: '~/.pi/agent-next',
-            sessions: { workspaceDir: '.agents/sessions' },
+            sessions: { workspacePath: '.agents/sessions' },
           },
         ],
       },
@@ -234,7 +234,7 @@ describe('detectMismatches', { concurrency: true }, () => {
             source: 'pi/agent',
             name: 'agent',
             guestTarget: '~/.pi/agent',
-            sessions: { workspaceDir: '.agents/sessions' },
+            sessions: { workspacePath: '.agents/sessions' },
           },
         ],
       };
@@ -359,8 +359,8 @@ describe('cache invalidation helpers', { concurrency: true }, () => {
         join(profileDir, 'lima.yaml'),
         [
           'user:',
-          '  name: pi',
-          '  home: /home/pi',
+          '  name: agent',
+          '  home: /home/agent',
           'provision:',
           '  - mode: system',
           '    file: ./provision-system.sh',
@@ -395,7 +395,7 @@ describe('cache invalidation helpers', { concurrency: true }, () => {
             source: 'pi/agent',
             name: 'agent',
             guestTarget: '~/.pi/agent',
-            sessions: { workspaceDir: '.agents/sessions' },
+            sessions: { workspacePath: '.agents/sessions' },
           },
         ],
       };
@@ -420,7 +420,7 @@ describe('cache invalidation helpers', { concurrency: true }, () => {
             source: 'pi/agent',
             name: 'agent',
             guestTarget: '~/.pi/agent',
-            sessions: { workspaceDir: '.agents/sessions' },
+            sessions: { workspacePath: '.agents/sessions' },
           },
         ],
       };
@@ -446,7 +446,7 @@ describe('cache invalidation helpers', { concurrency: true }, () => {
             source: 'pi/agent',
             name: 'agent',
             guestTarget: '~/.pi/agent',
-            sessions: { workspaceDir: '.agents/sessions' },
+            sessions: { workspacePath: '.agents/sessions' },
           },
         ],
       };

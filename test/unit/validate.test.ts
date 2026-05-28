@@ -80,16 +80,16 @@ describe('isVersionAtLeast', { concurrency: true }, () => {
 
 describe('findCacheUnsafePath', { concurrency: true }, () => {
   it('returns the matching path when content references a cache-unsafe path', () => {
-    const result = findCacheUnsafePath('cp /home/pi/workdir/file /tmp', [
-      '/home/pi/workdir',
+    const result = findCacheUnsafePath('cp /home/agent/workdir/file /tmp', [
+      '/home/agent/workdir',
       '/mnt/host-config/agent',
     ]);
-    assert.strictEqual(result, '/home/pi/workdir');
+    assert.strictEqual(result, '/home/agent/workdir');
   });
 
   it('returns undefined when no unsafe paths are found', () => {
     const result = findCacheUnsafePath('echo hello', [
-      '/home/pi/workdir',
+      '/home/agent/workdir',
       '/mnt/host-config/agent',
     ]);
     assert.strictEqual(result, undefined);
@@ -97,7 +97,7 @@ describe('findCacheUnsafePath', { concurrency: true }, () => {
 
   it('matches config mount paths', () => {
     const result = findCacheUnsafePath('cat /mnt/host-config/agent/settings.json', [
-      '/home/pi/workdir',
+      '/home/agent/workdir',
       '/mnt/host-config/agent',
     ]);
     assert.strictEqual(result, '/mnt/host-config/agent');
@@ -118,8 +118,8 @@ describe('validateConfig', { concurrency: false }, () => {
         join(profileDir, 'lima.yaml'),
         [
           'user:',
-          '  name: pi',
-          '  home: /home/pi',
+          '  name: agent',
+          '  home: /home/agent',
           'provision:',
           '  - mode: user',
           '    file: ./provision-user.sh',
@@ -161,12 +161,12 @@ describe('validateConfig', { concurrency: false }, () => {
         join(profileDir, 'lima.yaml'),
         [
           'user:',
-          '  name: pi',
-          '  home: /home/pi',
+          '  name: agent',
+          '  home: /home/agent',
           'provision:',
           '  - mode: user',
           '    script: |',
-          '      ls /home/pi/workdir',
+          '      ls /home/agent/workdir',
           '',
         ].join('\n'),
       );

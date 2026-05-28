@@ -11,9 +11,9 @@ Provisioning is split into two phases:
    project-specific state.
 2. **Project finalization** runs after a project VM has been cloned from the
    cache and started. psbx waits for `~/workdir`, creates declared
-   `sessions.workspaceDir` directories, copies each current profile config mount
+   `sessions.workspacePath` directories, copies each current profile config mount
    into the guest target, and for any mount
-   that declares both `sessions.workspaceDir` and `sessions.guestSymlink` replaces that
+   that declares both `sessions.workspacePath` and `sessions.guestSymlink` replaces that
    guest path with a symlink into the project session directory.
 
 ## pi-in-ubuntu profile template

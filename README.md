@@ -58,10 +58,11 @@ psbx uses a profile-centered configuration hierarchy:
 
 You start from one of the shipped profiles that can be selected during `psbx profile init --template ...`
 
-- `pi-in-ubuntu`: default; used in the quick-start, or
-- `copilot-in-ubuntu` geared towards usage of GitHub Copilot CLI instead of pi.
+- `pi-in-ubuntu`: default; used in the quick-start,
+- `copilot-in-ubuntu` geared towards usage of GitHub Copilot CLI instead of pi, or
+- `opencode-in-ubuntu` geared towards usage of [OpenCode](https://opencode.ai/) instead of pi.
 
-For details, see [Pi agent configuration](docs/CONFIG.md#pi-agent-configuration) and [GitHub Copilot CLI configuration](docs/CONFIG.md#github-copilot-cli-configuration) in the Configuration Reference.
+For details, see [Pi agent configuration](docs/CONFIG.md#pi-agent-configuration), [GitHub Copilot CLI configuration](docs/CONFIG.md#github-copilot-cli-configuration), and [OpenCode configuration](docs/CONFIG.md#opencode-configuration) in the Configuration Reference.
 
 After initialization, you should `psbx profile edit <profile-name>` to adapt
 the profile to your needs. This profile then defines the common configuration as many
@@ -163,7 +164,7 @@ or delete the cache key for a specific profile.
 |---|---|---|
 | `psbx up` | Bring sandbox up: create, start, and enter in one step | `--profile <name>`, `--shell`, `--only-create`, `--only-recreate`, `--only-start`, `--force-recreate` |
 | `psbx exec [-- cmd...]` | Run a one-off command in the sandbox (auto-starts if stopped) | `--shell` |
-| `psbx profile init <profile>` | Create a new profile from a shipped profile template or existing profile | `--template <name>` (pi-in-ubuntu, self-test, copilot-in-ubuntu), `--from-profile <name>`, `--self-test`, `--copy-from-host`, `--symlink-from-host`, `--set-as-default` |
+| `psbx profile init <profile>` | Create a new profile from a shipped profile template or existing profile | `--template <name>` (pi-in-ubuntu, self-test, copilot-in-ubuntu, opencode-in-ubuntu), `--from-profile <name>`, `--self-test`, `--copy-from-host`, `--symlink-from-host`, `--set-as-default` |
 | `psbx stop` | Stop the VM | `-f, --force` |
 | `psbx restart` | Stop and then start the VM | `-f, --force` |
 | `psbx delete [vm-name]` | Delete a VM (defaults to current project) | `-f, --force`, `--all-registered` |

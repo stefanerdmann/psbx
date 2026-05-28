@@ -21,7 +21,7 @@ import type { ConfigMount, LimaConfig, LimaMount, Profile } from './types.ts';
 
 type ProjectOverride = Partial<Pick<LimaConfig, 'cpus' | 'memory' | 'disk'>>;
 
-const GUEST_HOME = '/home/pi';
+const GUEST_HOME = '/home/agent';
 const GUEST_WORKDIR = `${GUEST_HOME}/workdir`;
 const GUEST_PROJECT_AGENT_DIR = `${GUEST_WORKDIR}/.agents`;
 const HOST_CONFIG_BASE = '/mnt/host-config';

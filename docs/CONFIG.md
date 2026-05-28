@@ -59,7 +59,7 @@ configMounts:
     name: agent
     guestTarget: ~/.pi/agent
     sessions:
-      workspaceDir: .agents/pi-sessions
+      workspacePath: .agents/pi-sessions
       guestSymlink: ~/.pi/agents/sessions
 
 shellEnvAllowlist:
@@ -74,12 +74,29 @@ configMounts:
     name: copilot
     guestTarget: ~/.copilot
     sessions:
-      workspaceDir: .agents/copilot-sessions/session-state
+      workspacePath: .agents/copilot-sessions/session-state
       guestSymlink: ~/.copilot/session-state
     exfiltrateExcludes: [session-state, session-store.db, logs, ide]
 
 shellEnvAllowlist:
   # - COPILOT_GITHUB_TOKEN
+```
+
+Example for the `opencode-in-ubuntu` profile template:
+
+```yaml
+configMounts:
+  - source: opencode
+    name: opencode
+    guestTarget: ~/.config/opencode
+    sessions:
+      workspacePath: .agents/opencode-sessions
+      guestSymlink: ~/.config/opencode/sessions
+    exfiltrateExcludes: [sessions, logs]
+
+shellEnvAllowlist:
+  # - ANTHROPIC_API_KEY
+  # - OPENAI_API_KEY
 ```
 
 ### `configMounts` fields
@@ -89,11 +106,11 @@ shellEnvAllowlist:
 | `source` | yes | Profile-relative path to the host config directory. |
 | `name` | yes | Mount-point segment under `/mnt/host-config/<name>`. Must match `[A-Za-z0-9._-]+`. |
 | `guestTarget` | yes | Absolute or `~`-prefixed path inside the VM that finalization should populate from the mount. Used by `profile fork` to know where to read back. |
-| `sessions.workspaceDir` | no | Workspace-relative directory created under the project (e.g., `.agents/pi-sessions`). When `sessions.guestSymlink` is also set, this is where the symlink points. |
-| `sessions.guestSymlink` | no | Absolute or `~`-prefixed guest path that finalization replaces with a symlink to `sessions.workspaceDir`. Any existing file or directory at this path is removed first. |
+| `sessions.workspacePath` | no | Workspace-relative directory created under the project (e.g., `.agents/pi-sessions`). When `sessions.guestSymlink` is also set, this is where the symlink points. |
+| `sessions.guestSymlink` | no | Absolute or `~`-prefixed guest path that finalization replaces with a symlink to `sessions.workspacePath`. Any existing file or directory at this path is removed first. |
 | `exfiltrateExcludes` | no | Subpath names to drop after `profile fork` copies the guest target back into the new profile. |
 
-`source` and `sessions.workspaceDir` must be relative paths that stay inside the
+`source` and `sessions.workspacePath` must be relative paths that stay inside the
 profile directory and project directory respectively; absolute paths and `..`
 segments are rejected.
 
@@ -223,6 +240,32 @@ The host profile is not mutated by the VM. Changes made inside the guest to `~/.
 ```bash
 psbx profile fork new-profile
 ```
+
+## OpenCode configuration
+
+The `opencode-in-ubuntu` profile template installs
+[OpenCode](https://opencode.ai/) in the VM. Create a profile with:
+
+```bash
+psbx profile init opencode --template opencode-in-ubuntu
+cp -a ~/.config/opencode/.    ~/.psbx/profiles/opencode/opencode/   # optional
+```
+
+The profile mounts the OpenCode config directory:
+
+| Profile path | Guest mount | Guest target | Notes |
+|---|---|---|---|
+| `opencode/` | `/mnt/host-config/opencode` (read-only) | `~/.config/opencode` | Follows the upstream [`~/.config/opencode` layout](https://opencode.ai/docs/config/) (e.g., `opencode.json`). |
+
+During project VM finalization the directory is copied to `~/.config/opencode`
+in the guest. To keep session history with the project,
+`~/.config/opencode/sessions` is replaced with a symlink to
+`~/workdir/.agents/opencode-sessions`.
+
+`profile fork <new-profile>` exfiltrates `~/.config/opencode` back into the
+new profile but excludes `sessions` and `logs` (declared via
+`exfiltrateExcludes` in `env.yaml`) so workspace session history is not
+duplicated into the profile.
 
 ## GitHub Copilot CLI configuration
 
