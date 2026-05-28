@@ -248,7 +248,15 @@ The `opencode-in-ubuntu` profile template installs
 
 ```bash
 psbx profile init opencode --template opencode-in-ubuntu
-cp -a ~/.config/opencode/.    ~/.psbx/profiles/opencode/opencode/   # optional
+```
+
+If you already have OpenCode configured on the host (`~/.config/opencode`),
+you can seed the profile from it:
+
+```bash
+psbx profile init opencode --template opencode-in-ubuntu --copy-from-host
+# or, to keep a live link:
+psbx profile init opencode --template opencode-in-ubuntu --symlink-from-host
 ```
 
 The profile mounts the OpenCode config directory:
@@ -275,7 +283,15 @@ in the VM. Create a profile with:
 
 ```bash
 psbx profile init copilot --template copilot-in-ubuntu
-cp -a ~/.copilot/.            ~/.psbx/profiles/copilot/copilot/   # optional
+```
+
+If you already have Copilot configured on the host (`~/.copilot`),
+you can seed the profile from it:
+
+```bash
+psbx profile init copilot --template copilot-in-ubuntu --copy-from-host
+# or, to keep a live link:
+psbx profile init copilot --template copilot-in-ubuntu --symlink-from-host
 ```
 
 The profile mounts the Copilot config directory:
