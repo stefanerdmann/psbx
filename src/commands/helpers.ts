@@ -232,7 +232,9 @@ function hashDefaultCmd(profile: Profile): string {
  * changes additionally flip `limaConfigHash`, which routes the operation
  * through a full recreate.
  */
-function hashFinalizerConfig(profile: Pick<Profile, 'configMounts' | 'sessions' | 'dir'>): string {
+function hashFinalizerConfig(
+  profile: Pick<Profile, 'configMounts' | 'sessions' | 'shadowPaths' | 'dir'>,
+): string {
   const hash = createHash('sha256');
   const canonical = JSON.stringify({
     configMounts: (profile.configMounts || []).map((m) => ({
@@ -244,6 +246,7 @@ function hashFinalizerConfig(profile: Pick<Profile, 'configMounts' | 'sessions' 
       workspacePath: s.workspacePath,
       guestSymlink: s.guestSymlink ?? null,
     })),
+    shadowPaths: profile.shadowPaths || [],
   });
   hash.update(canonical);
 

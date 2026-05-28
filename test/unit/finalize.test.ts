@@ -106,9 +106,45 @@ describe('profileConfigFinalizerScript', { concurrency: true }, () => {
   });
 
   it('handles empty configMounts', () => {
-    const script = profileConfigFinalizerScript({ configMounts: [], sessions: [] });
+    const script = profileConfigFinalizerScript({
+      configMounts: [],
+      sessions: [],
+      shadowPaths: [],
+    });
     assert.ok(script.includes('set -eu'));
     assert.ok(script.includes('mountpoint'));
+  });
+
+  it('emits no bind-mount lines when shadowPaths is empty', () => {
+    const script = profileConfigFinalizerScript({
+      configMounts: [],
+      sessions: [],
+      shadowPaths: [],
+    });
+    assert.ok(!script.includes('mount --bind'));
+  });
+
+  it('emits sudo mount --bind for each shadowPath', () => {
+    const script = profileConfigFinalizerScript({
+      configMounts: [],
+      sessions: [],
+      shadowPaths: ['node_modules'],
+    });
+    assert.ok(script.includes('sudo mkdir -p'));
+    assert.ok(script.includes('/var/lib/psbx/shadows/node_modules'));
+    assert.ok(script.includes('/home/agent/workdir/node_modules'));
+    assert.ok(script.includes('sudo mount --bind'));
+    assert.ok(script.includes('sudo chown $(id -u):$(id -g)'));
+  });
+
+  it('shell-quotes shadow paths', () => {
+    const script = profileConfigFinalizerScript({
+      configMounts: [],
+      sessions: [],
+      shadowPaths: ['my modules'],
+    });
+    assert.ok(script.includes(shellQuote('/var/lib/psbx/shadows/my modules')));
+    assert.ok(script.includes(shellQuote('/home/agent/workdir/my modules')));
   });
 });
 

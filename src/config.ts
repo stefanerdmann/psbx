@@ -225,7 +225,27 @@ function validateEnv(parsed: unknown, label: string): EnvConfig {
     });
   }
 
-  return { defaultCmd, shellEnvAllowlist, configMounts, sessions };
+  const rawShadowPaths = envData.shadowPaths;
+  let shadowPaths: string[] = [];
+  if (rawShadowPaths !== undefined && rawShadowPaths !== null) {
+    if (!Array.isArray(rawShadowPaths)) {
+      throw new Error(`${label}: shadowPaths must be an array`);
+    }
+    const seenShadow = new Set<string>();
+    for (const [idx, entry] of rawShadowPaths.entries()) {
+      if (typeof entry !== 'string' || !entry) {
+        throw new Error(`${label}: shadowPaths[${idx}] must be a non-empty string`);
+      }
+      assertRelativeSubpath(entry, `${label}: shadowPaths[${idx}]`);
+      if (seenShadow.has(entry)) {
+        throw new Error(`${label}: duplicate shadowPaths entry "${entry}"`);
+      }
+      seenShadow.add(entry);
+    }
+    shadowPaths = [...rawShadowPaths];
+  }
+
+  return { defaultCmd, shellEnvAllowlist, configMounts, sessions, shadowPaths };
 }
 
 function loadEnv(profileDir: string): EnvConfig {
@@ -262,7 +282,7 @@ function resolveProfile(config: AppConfig, profileNameOverride?: string | null):
     );
   }
 
-  const { defaultCmd, shellEnvAllowlist, configMounts, sessions } = loadEnv(dir);
+  const { defaultCmd, shellEnvAllowlist, configMounts, sessions, shadowPaths } = loadEnv(dir);
 
   return {
     name,
@@ -272,6 +292,7 @@ function resolveProfile(config: AppConfig, profileNameOverride?: string | null):
     shellEnvAllowlist,
     configMounts,
     sessions,
+    shadowPaths,
   };
 }
 

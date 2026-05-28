@@ -357,4 +357,95 @@ describe('validateEnv', { concurrency: true }, () => {
       /guestSymlink must be a non-empty string/,
     );
   });
+
+  it('defaults shadowPaths to empty array when omitted', () => {
+    const result = validateEnv(
+      {
+        configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+      },
+      'env',
+    );
+    assert.deepStrictEqual(result.shadowPaths, []);
+  });
+
+  it('parses valid shadowPaths', () => {
+    const result = validateEnv(
+      {
+        configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+        shadowPaths: ['node_modules', '.venv'],
+      },
+      'env',
+    );
+    assert.deepStrictEqual(result.shadowPaths, ['node_modules', '.venv']);
+  });
+
+  it('rejects absolute shadowPaths', () => {
+    assert.throws(
+      () =>
+        validateEnv(
+          {
+            configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+            shadowPaths: ['/usr/lib'],
+          },
+          'env',
+        ),
+      /relative path/,
+    );
+  });
+
+  it('rejects shadowPaths with ..', () => {
+    assert.throws(
+      () =>
+        validateEnv(
+          {
+            configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+            shadowPaths: ['../outside'],
+          },
+          'env',
+        ),
+      /relative path/,
+    );
+  });
+
+  it('rejects non-string shadowPaths entry', () => {
+    assert.throws(
+      () =>
+        validateEnv(
+          {
+            configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+            shadowPaths: [42],
+          },
+          'env',
+        ),
+      /non-empty string/,
+    );
+  });
+
+  it('rejects duplicate shadowPaths', () => {
+    assert.throws(
+      () =>
+        validateEnv(
+          {
+            configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+            shadowPaths: ['node_modules', 'node_modules'],
+          },
+          'env',
+        ),
+      /duplicate/,
+    );
+  });
+
+  it('rejects non-array shadowPaths', () => {
+    assert.throws(
+      () =>
+        validateEnv(
+          {
+            configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+            shadowPaths: 'node_modules',
+          },
+          'env',
+        ),
+      /shadowPaths must be an array/,
+    );
+  });
 });

@@ -462,6 +462,31 @@ describe('cache invalidation helpers', { concurrency: true }, () => {
       rmSync(profileDir, { recursive: true, force: true });
     }
   });
+
+  it('hashFinalizerConfig changes when shadowPaths changes', () => {
+    const profileDir = mkdtempSync(join(tmpdir(), 'psbx-shadow-hash-'));
+    try {
+      mkdirSync(join(profileDir, 'pi', 'agent'), { recursive: true });
+      writeFileSync(join(profileDir, 'pi', 'agent', 'settings.json'), '{"a":1}\n');
+      const base = {
+        dir: profileDir,
+        configMounts: [
+          {
+            source: 'pi/agent',
+            name: 'agent',
+            guestTarget: '~/.pi/agent',
+          },
+        ],
+        sessions: [],
+        shadowPaths: ['node_modules'],
+      };
+      const hash1 = hashFinalizerConfig(base);
+      const hash2 = hashFinalizerConfig({ ...base, shadowPaths: ['node_modules', '.venv'] });
+      assert.notStrictEqual(hash1, hash2);
+    } finally {
+      rmSync(profileDir, { recursive: true, force: true });
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------

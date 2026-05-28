@@ -28,7 +28,9 @@ function guestProjectPath(relativePath: string): string {
   return `${GUEST_WORKDIR}/${relativePath.replace(/^\.?\//, '')}`;
 }
 
-function profileConfigFinalizerScript(profile: Pick<Profile, 'configMounts' | 'sessions'>): string {
+function profileConfigFinalizerScript(
+  profile: Pick<Profile, 'configMounts' | 'sessions' | 'shadowPaths'>,
+): string {
   const lines: string[] = [
     'set -eu',
     `until mountpoint -q ${shellQuote(GUEST_WORKDIR)}; do sleep 1; done`,
@@ -61,6 +63,16 @@ function profileConfigFinalizerScript(profile: Pick<Profile, 'configMounts' | 's
       lines.push(`mkdir -p ${shellQuote(symlinkPath.replace(/\/[^/]+$/, ''))}`);
       lines.push(`ln -sfn ${shellQuote(sessionTarget)} ${shellQuote(symlinkPath)}`);
     }
+  }
+
+  // Pass 4: shadow paths — guest-local bind-mounts over workdir subdirectories
+  for (const shadowPath of profile.shadowPaths || []) {
+    const shadow = `/var/lib/psbx/shadows/${shadowPath}`;
+    const target = `${GUEST_WORKDIR}/${shadowPath}`;
+    lines.push(`sudo mkdir -p ${shellQuote(shadow)}`);
+    lines.push(`sudo chown $(id -u):$(id -g) ${shellQuote(shadow)}`);
+    lines.push(`mkdir -p ${shellQuote(target)}`);
+    lines.push(`sudo mount --bind ${shellQuote(shadow)} ${shellQuote(target)}`);
   }
 
   return `${lines.join('\n')}\n`;

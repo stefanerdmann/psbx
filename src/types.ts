@@ -40,6 +40,7 @@ export interface EnvConfig {
   shellEnvAllowlist: string[];
   configMounts: ConfigMount[];
   sessions: SessionMount[];
+  shadowPaths: string[];
 }
 
 export interface Profile extends EnvConfig {
