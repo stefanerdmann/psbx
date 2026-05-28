@@ -19,7 +19,7 @@ export async function listProfiles(options: ListProfilesOptions = {}): Promise<v
     }
 
     const entries = readdirSync(profilesDir, { withFileTypes: true })
-      .filter((d) => d.isDirectory())
+      .filter((d) => d.isDirectory() && !d.name.startsWith('.'))
       .map((d) => d.name)
       .sort();
 

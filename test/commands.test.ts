@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 import {
   chmodSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -1119,6 +1120,35 @@ process.exit(1);
     assert.ok(r.stdout.includes('self-test'), `stdout: ${r.stdout}`);
     // --plain should not include markers like (*)
     assert.ok(!r.stdout.includes('(*)'), `stdout should not include (*): ${r.stdout}`);
+  });
+
+  it('[cmd] profile list excludes hidden directories', () => {
+    const home = mkdtempSync(join(tmpdir(), 'psbx-list-hidden-'));
+    try {
+      run(['profile', 'init', 'visible', '--self-test'], { HOME: home, cwd: projectDir });
+      // Create a hidden directory alongside the real profile
+      mkdirSync(join(home, '.psbx', 'profiles', '.hidden'), { recursive: true });
+      const r = run(['profile', 'list'], { HOME: home, cwd: projectDir });
+      assert.strictEqual(r.status, 0, `stderr: ${r.stderr}`);
+      assert.ok(r.stdout.includes('visible'), `stdout: ${r.stdout}`);
+      assert.ok(!r.stdout.includes('.hidden'), `hidden dir must not appear in stdout: ${r.stdout}`);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it('[cmd] profile list --plain excludes hidden directories', () => {
+    const home = mkdtempSync(join(tmpdir(), 'psbx-list-hidden-plain-'));
+    try {
+      run(['profile', 'init', 'visible', '--self-test'], { HOME: home, cwd: projectDir });
+      mkdirSync(join(home, '.psbx', 'profiles', '.hidden'), { recursive: true });
+      const r = run(['profile', 'list', '--plain'], { HOME: home, cwd: projectDir });
+      assert.strictEqual(r.status, 0, `stderr: ${r.stderr}`);
+      assert.ok(r.stdout.includes('visible'), `stdout: ${r.stdout}`);
+      assert.ok(!r.stdout.includes('.hidden'), `hidden dir must not appear in stdout: ${r.stdout}`);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
   });
 
   // --- list --prune ---
