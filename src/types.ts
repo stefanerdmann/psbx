@@ -11,8 +11,10 @@ export interface ConfigMount {
   source: string;
   name: string;
   guestTarget: string;
-  projectSessionDir?: string;
-  sessionSymlink?: string;
+  sessions?: {
+    workspaceDir: string;
+    guestSymlink?: string;
+  };
   exfiltrateExcludes?: string[];
   driftDetectionExcludes?: string[];
 }

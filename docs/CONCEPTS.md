@@ -185,7 +185,7 @@ forwarding no host env vars.
 | Profile change | Hash flipped | Action |
 |---|---|---|
 | `lima.yaml` fields; config mount add/remove/rename | `limaConfigHash` | recreate (with confirm prompt) |
-| config mount source contents; `projectSessionDir`; `sessionSymlink`; `guestTarget`; `source`; `name` of an existing mount | `finalizerHash` | re-run idempotent finalizer in place; no restart |
+| config mount source contents; `sessions.workspaceDir`; `sessions.guestSymlink`; `guestTarget`; `source`; `name` of an existing mount | `finalizerHash` | re-run idempotent finalizer in place; no restart |
 | `configMounts[].exfiltrateExcludes` | — | read live at exfiltrate time |
 | `shellEnvAllowlist` | `shellEnvAllowlistHash` (informational) | none — read live by `exec` and `up` |
 | `defaultCmd` | `defaultCmdHash` (informational) | none — read live by `up` |

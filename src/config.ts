@@ -160,15 +160,27 @@ function validateEnv(parsed: unknown, label: string): EnvConfig {
 
     const normalized: ConfigMount = { source, name, guestTarget };
 
-    const projectSessionDir = mount.projectSessionDir;
-    if (projectSessionDir !== undefined) {
-      if (typeof projectSessionDir !== 'string' || !projectSessionDir) {
+    const sessions = mount.sessions;
+    if (sessions !== undefined) {
+      if (typeof sessions !== 'object' || sessions === null) {
         throw new Error(
-          `${label}: configMounts[${idx}].projectSessionDir must be a non-empty string`,
+          `${label}: configMounts[${idx}].sessions must be an object`,
         );
       }
-      assertRelativeSubpath(projectSessionDir, `${label}: configMounts[${idx}].projectSessionDir`);
-      normalized.projectSessionDir = projectSessionDir;
+      const workspaceDir = (sessions as Record<string, unknown>).workspaceDir;
+      if (typeof workspaceDir !== 'string' || !workspaceDir) {
+        throw new Error(
+          `${label}: configMounts[${idx}].sessions.workspaceDir must be a non-empty string`,
+        );
+      }
+      assertRelativeSubpath(workspaceDir, `${label}: configMounts[${idx}].sessions.workspaceDir`);
+      const guestSymlink = (sessions as Record<string, unknown>).guestSymlink;
+      if (guestSymlink !== undefined && (typeof guestSymlink !== 'string' || !guestSymlink)) {
+        throw new Error(
+          `${label}: configMounts[${idx}].sessions.guestSymlink must be a non-empty string`,
+        );
+      }
+      normalized.sessions = { workspaceDir, ...(guestSymlink ? { guestSymlink } : {}) };
     }
 
     const exfiltrateExcludes = mount.exfiltrateExcludes;

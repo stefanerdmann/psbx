@@ -226,7 +226,7 @@ function hashDefaultCmd(profile: Profile): string {
 /**
  * Hash of the profile inputs the finalizer consumes. A mismatch means
  * either the contents of a configMount's source dir changed, or
- * projectSessionDir / sessionSymlink / guestTarget were edited. Add / remove / rename of
+ * sessions.workspaceDir / sessions.guestSymlink / guestTarget were edited. Add / remove / rename of
  * mounts also flips this hash, but those changes additionally flip
  * `limaConfigHash`, which routes the operation through a full recreate.
  */
@@ -237,8 +237,7 @@ function hashFinalizerConfig(profile: Profile): string {
       source: m.source,
       name: m.name,
       guestTarget: m.guestTarget,
-      projectSessionDir: m.projectSessionDir ?? null,
-      sessionSymlink: m.sessionSymlink ?? null,
+      sessions: m.sessions ?? null,
     })),
   });
   hash.update(canonical);
@@ -358,8 +357,8 @@ function assertSafeAgentDir(projectDir: string): void {
 function prepareProjectState(profile: Profile, projectDir: string): void {
   assertSafeAgentDir(projectDir);
   for (const mount of profile.configMounts) {
-    if (mount.projectSessionDir) {
-      mkdirSync(join(projectDir, mount.projectSessionDir), { recursive: true });
+    if (mount.sessions) {
+      mkdirSync(join(projectDir, mount.sessions.workspaceDir), { recursive: true });
     }
   }
 }

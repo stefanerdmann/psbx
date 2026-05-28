@@ -58,8 +58,9 @@ configMounts:
   - source: pi/agent
     name: agent
     guestTarget: ~/.pi/agent
-    projectSessionDir: .agents/pi-sessions
-    sessionSymlink: ~/.pi/agents/sessions
+    sessions:
+      workspaceDir: .agents/pi-sessions
+      guestSymlink: ~/.pi/agents/sessions
 
 shellEnvAllowlist:
   # - GHE_MCP_TOKEN
@@ -72,8 +73,9 @@ configMounts:
   - source: copilot
     name: copilot
     guestTarget: ~/.copilot
-    projectSessionDir: .agents/copilot-sessions/session-state
-    sessionSymlink: ~/.copilot/session-state
+    sessions:
+      workspaceDir: .agents/copilot-sessions/session-state
+      guestSymlink: ~/.copilot/session-state
     exfiltrateExcludes: [session-state, session-store.db, logs, ide]
 
 shellEnvAllowlist:
@@ -87,11 +89,11 @@ shellEnvAllowlist:
 | `source` | yes | Profile-relative path to the host config directory. |
 | `name` | yes | Mount-point segment under `/mnt/host-config/<name>`. Must match `[A-Za-z0-9._-]+`. |
 | `guestTarget` | yes | Absolute or `~`-prefixed path inside the VM that finalization should populate from the mount. Used by `profile fork` to know where to read back. |
-| `projectSessionDir` | no | Workspace-relative directory created under the project (e.g., `.agents/pi-sessions`). When `sessionSymlink` is also set, this is where the symlink points. |
-| `sessionSymlink` | no | Absolute or `~`-prefixed guest path that finalization replaces with a symlink to `projectSessionDir`. Any existing file or directory at this path is removed first. |
+| `sessions.workspaceDir` | no | Workspace-relative directory created under the project (e.g., `.agents/pi-sessions`). When `sessions.guestSymlink` is also set, this is where the symlink points. |
+| `sessions.guestSymlink` | no | Absolute or `~`-prefixed guest path that finalization replaces with a symlink to `sessions.workspaceDir`. Any existing file or directory at this path is removed first. |
 | `exfiltrateExcludes` | no | Subpath names to drop after `profile fork` copies the guest target back into the new profile. |
 
-`source` and `projectSessionDir` must be relative paths that stay inside the
+`source` and `sessions.workspaceDir` must be relative paths that stay inside the
 profile directory and project directory respectively; absolute paths and `..`
 segments are rejected.
 

@@ -220,7 +220,7 @@ describe('buildLimaConfig', { concurrency: false }, () => {
             source: 'pi/agent',
             name: 'agent',
             guestTarget: '~/.pi/agent',
-            projectSessionDir: '.agents/sessions',
+            sessions: { workspaceDir: '.agents/sessions' },
           },
         ],
       };

@@ -7,7 +7,7 @@
  *      on every project VM after clone/create. Materializes profile config
  *      mounts into the guest home, applies per-mount fix-ups (e.g. tighten
  *      `auth.json` perms, symlink agent session directories into the
- *      project via the `sessionSymlink` config), and on a
+ *      project via the `sessions.guestSymlink` config), and on a
  *      cloned VM regenerates SSH host keys once.
  *
  *   2. `CACHE_SYSPREP_SCRIPT` — runs once at the end of cache provisioning
@@ -35,8 +35,8 @@ function profileConfigFinalizerScript(profile: Profile): string {
   ];
 
   for (const mount of profile.configMounts || []) {
-    if (mount.projectSessionDir) {
-      lines.push(`mkdir -p ${shellQuote(guestProjectPath(mount.projectSessionDir))}`);
+    if (mount.sessions) {
+      lines.push(`mkdir -p ${shellQuote(guestProjectPath(mount.sessions.workspaceDir))}`);
     }
   }
 
@@ -48,9 +48,9 @@ function profileConfigFinalizerScript(profile: Profile): string {
       `if [ -d ${shellQuote(`${source}/.`)} ]; then cp -a ${shellQuote(`${source}/.`)} ${shellQuote(target)}; fi`,
     );
 
-    if (mount.projectSessionDir && mount.sessionSymlink) {
-      const sessionTarget = guestProjectPath(mount.projectSessionDir);
-      const symlinkPath = expandGuestHome(mount.sessionSymlink);
+    if (mount.sessions && mount.sessions.guestSymlink) {
+      const sessionTarget = guestProjectPath(mount.sessions.workspaceDir);
+      const symlinkPath = expandGuestHome(mount.sessions.guestSymlink);
       lines.push(`rm -rf ${shellQuote(symlinkPath)}`);
       lines.push(`mkdir -p ${shellQuote(symlinkPath.replace(/\/[^/]+$/, ''))}`);
       lines.push(`ln -sfn ${shellQuote(sessionTarget)} ${shellQuote(symlinkPath)}`);

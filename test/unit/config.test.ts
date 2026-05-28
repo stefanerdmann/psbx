@@ -167,7 +167,7 @@ describe('validateEnv', { concurrency: true }, () => {
     );
   });
 
-  it('rejects projectSessionDir that escapes project root', () => {
+  it('rejects sessions.workspaceDir that escapes project root', () => {
     assert.throws(
       () =>
         validateEnv(
@@ -177,7 +177,7 @@ describe('validateEnv', { concurrency: true }, () => {
                 source: 'pi/agent',
                 name: 'agent',
                 guestTarget: '~/.pi/agent',
-                projectSessionDir: '../sessions',
+                sessions: { workspaceDir: '../sessions' },
               },
             ],
           },

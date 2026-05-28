@@ -39,8 +39,7 @@ describe('profileConfigFinalizerScript', { concurrency: true }, () => {
           source: 'pi/agent',
           name: 'agent',
           guestTarget: '~/.pi/agent',
-          projectSessionDir: '.agents/sessions',
-          sessionSymlink: '~/.pi/agents/sessions',
+          sessions: { workspaceDir: '.agents/sessions', guestSymlink: '~/.pi/agents/sessions' },
         },
       ],
     });
@@ -50,15 +49,14 @@ describe('profileConfigFinalizerScript', { concurrency: true }, () => {
     assert.ok(!script.includes('/Users/alice/project'));
   });
 
-  it('creates session dirs for mounts with projectSessionDir', () => {
+  it('creates session dirs for mounts with sessions.workspaceDir', () => {
     const script = profileConfigFinalizerScript({
       configMounts: [
         {
           source: 'copilot',
           name: 'copilot',
           guestTarget: '~/.copilot',
-          projectSessionDir: '.agents/copilot-sessions/session-state',
-          sessionSymlink: '~/.copilot/session-state',
+          sessions: { workspaceDir: '.agents/copilot-sessions/session-state', guestSymlink: '~/.copilot/session-state' },
         },
       ],
     });

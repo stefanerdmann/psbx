@@ -96,7 +96,7 @@ deterministic and prevents accidental forwarding of the host environment.
 
 ## VM-local and persistent agent data
 
-Each agent's config directory (e.g., `~/.pi/agent`, `~/.copilot`) is copied into the VM during finalization and is VM-local. `~/workdir/.agents` is inside the writable project mount and persists on the host. When a `configMount` declares both `projectSessionDir` and `sessionSymlink`, finalization creates the project directory and replaces the `sessionSymlink` path inside the VM with a symlink pointing to it — for example, `~/.pi/agents/sessions` → `~/workdir/.agents/pi-sessions` and `~/.copilot/session-state` → `~/workdir/.agents/copilot-sessions/session-state`.
+Each agent's config directory (e.g., `~/.pi/agent`, `~/.copilot`) is copied into the VM during finalization and is VM-local. `~/workdir/.agents` is inside the writable project mount and persists on the host. When a `configMount` declares both `sessions.workspaceDir` and `sessions.guestSymlink`, finalization creates the project directory and replaces the `sessions.guestSymlink` path inside the VM with a symlink pointing to it — for example, `~/.pi/agents/sessions` → `~/workdir/.agents/pi-sessions` and `~/.copilot/session-state` → `~/workdir/.agents/copilot-sessions/session-state`.
 
 ## Registry
 
@@ -118,7 +118,7 @@ The registry lives in `~/.psbx/config.json` under the top-level `vms` key. Each 
 }
 ```
 
-There is no per-VM `env` blob. On first read, old `env`/`envHash` fields are silently dropped. `limaConfigHash` changes prompt a recreate; this includes profile `lima.yaml` changes and config mount add/remove/rename changes. `finalizerHash` changes re-run the idempotent finalizer in place with no restart; this includes config mount source contents, `projectSessionDir`, `sessionSymlink`, `guestTarget`, `source`, and fields on existing mounts. `shellEnvAllowlistHash` and `defaultCmdHash` are stored for visibility only; `exec` and `up` read those values live from the profile. `configMounts[].exfiltrateExcludes` is also read live when exfiltrating.
+There is no per-VM `env` blob. On first read, old `env`/`envHash` fields are silently dropped. `limaConfigHash` changes prompt a recreate; this includes profile `lima.yaml` changes and config mount add/remove/rename changes. `finalizerHash` changes re-run the idempotent finalizer in place with no restart; this includes config mount source contents, `sessions.workspaceDir`, `sessions.guestSymlink`, `guestTarget`, `source`, and fields on existing mounts. `shellEnvAllowlistHash` and `defaultCmdHash` are stored for visibility only; `exec` and `up` read those values live from the profile. `configMounts[].exfiltrateExcludes` is also read live when exfiltrating.
 
 Profile cache metadata lives in the same file under `caches`. Each cache entry
 stores the cache key, Lima version, creation timestamp, and a `status` of
