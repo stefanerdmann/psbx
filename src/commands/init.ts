@@ -14,17 +14,19 @@ export const HELP_TEXT =
 
 import {
   cpSync,
+  type Dirent,
   existsSync,
   mkdirSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 import {
   getConfigPath,
   getProfilesDir,
@@ -110,12 +112,58 @@ function hostDirForMount(mount: ConfigMount): string {
   return gt;
 }
 
+/**
+ * Walk `rootDir` and warn about any symlink whose target resolves outside
+ * `rootDir`. `--copy-from-host` copies with `dereference: true`, so such a
+ * link silently pulls external content (e.g. a linked `~/.ssh/id_*` or a
+ * credentials file) into the profile and later into the VM. The excludes are
+ * opt-in and path-specific, so unknown links would otherwise leak by default.
+ */
+function warnOnEscapingSymlinks(rootDir: string): void {
+  let realRoot: string;
+  try {
+    realRoot = realpathSync(rootDir);
+  } catch {
+    return;
+  }
+  const prefix = realRoot + sep;
+  const walk = (dir: string): void => {
+    let entries: Dirent[];
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const full = join(dir, entry.name);
+      if (entry.isSymbolicLink()) {
+        let resolved: string;
+        try {
+          resolved = realpathSync(full);
+        } catch {
+          continue;
+        }
+        if (resolved !== realRoot && !resolved.startsWith(prefix)) {
+          console.warn(
+            `Warning: ${full} is a symlink pointing outside the source directory (${resolved}); ` +
+              'its contents were copied into the profile. Review before sharing the profile.',
+          );
+        }
+      } else if (entry.isDirectory()) {
+        walk(full);
+      }
+    }
+  };
+  walk(rootDir);
+}
+
 function copyFromHost(targetProfileDir: string, configMounts: ConfigMount[]): void {
   let copied = 0;
   for (const mount of configMounts) {
     const hostDir = hostDirForMount(mount);
     if (!existsSync(hostDir)) continue;
 
+    warnOnEscapingSymlinks(hostDir);
     const targetDir = join(targetProfileDir, mount.source);
     rmSync(targetDir, { recursive: true, force: true });
     cpSync(hostDir, targetDir, { recursive: true, dereference: true });

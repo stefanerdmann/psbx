@@ -30,6 +30,20 @@ shellEnvAllowlist variables ───────────► LIMA_SHELLENV_A
 profile cache VM ──────────────────────► cloned disk without project/profile config data
 ```
 
+### Importing host config at profile creation
+
+`psbx profile init --copy-from-host` copies the host config directories
+declared by `configMounts` into the new profile **with symlinks dereferenced**
+(`cpSync(..., { dereference: true })`). This means a symlink inside a host
+config dir that points outside it (e.g. a linked `~/.ssh/id_*` or a credentials
+file) has its *contents* copied into the profile — and later mounted into the
+VM. `exfiltrateExcludes` are opt-in and path-specific, so links you are not
+aware of would otherwise leak by default. To make this visible, psbx warns for
+each symlink whose target escapes the source directory during the copy; review
+the warnings before reusing or sharing the profile. `--symlink-from-host`
+instead links the host directory into the profile (no copy), so its contents
+are never duplicated into the profile tree.
+
 ## Non-goals
 
 psbx is **not** a security sandbox in the container-hardening sense. The following are explicitly out of scope:
