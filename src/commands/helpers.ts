@@ -275,11 +275,24 @@ function stopIfRunning(vmName: string, { force = false }: StopIfRunningOptions =
   }
 }
 
+/**
+ * Hash of the fully-rendered Lima config for this profile + project. Feeds the
+ * registry's `limaConfigHash`. A mismatch means the rendered lima.yaml (profile
+ * lima.yaml, provisioning file contents, CA certs, or project `.psbx/lima.yaml`
+ * overrides) changed since the VM was created, which `up` treats as a
+ * recreate-worthy mismatch (the VM must be rebuilt).
+ */
 function hashLimaConfig(profile: Profile, projectDir: string): string {
   const config: LimaConfig = buildLimaConfig(profile, projectDir);
   return hashRenderedLimaConfig(config);
 }
 
+/**
+ * Core hash over a rendered Lima config plus its referenced provisioning files
+ * and CA certs. Shared by `hashLimaConfig` (registry `limaConfigHash`) and by
+ * the cache layer's content-addressed cache key (`extraInputs` carries the
+ * cache-safe inputs). Pure function of its inputs.
+ */
 function hashRenderedLimaConfig(
   config: LimaConfig,
   extraInputs: Record<string, unknown> = {},
