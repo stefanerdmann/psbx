@@ -200,6 +200,27 @@ describe('lifecycle', {
     );
   });
 
+  it('[lifecycle] exec runs a multi-word command and propagates exit codes', {
+    timeout: 60_000,
+  }, () => {
+    // F1: a multi-word command is parsed correctly by bash in the guest.
+    const ok = run(['exec', '--', 'echo', 'hello world'], {
+      HOME: tmpHome,
+      cwd: projectDir,
+      timeout: 60_000,
+    });
+    assert.strictEqual(ok.status, 0, `stderr: ${ok.stderr}`);
+    assert.ok(ok.stdout.includes('hello world'), `stdout: ${ok.stdout}`);
+
+    // F3: a non-zero in-guest exit code propagates to psbx's exit code.
+    const fail = run(['exec', '--', 'sh', '-c', 'exit 7'], {
+      HOME: tmpHome,
+      cwd: projectDir,
+      timeout: 60_000,
+    });
+    assert.strictEqual(fail.status, 7, `stderr: ${fail.stderr}`);
+  });
+
   it('[lifecycle] logs outputs the cloud-init provisioning log', { timeout: 30_000 }, () => {
     const r = run(['logs'], { HOME: tmpHome, cwd: projectDir, timeout: 30_000 });
     assert.strictEqual(r.status, 0, `stderr: ${r.stderr}`);

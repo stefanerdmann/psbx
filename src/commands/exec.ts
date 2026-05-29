@@ -57,7 +57,7 @@ export async function exec(command: string[] = [], options: ExecOptions = {}): P
       const defaultCmd = profile?.defaultCmd;
       finalCommand = defaultCmd ? [defaultCmd] : [];
     }
-    limaShell(vmName, { shellEnvAllowlist, command: finalCommand });
+    process.exitCode = limaShell(vmName, { shellEnvAllowlist, command: finalCommand });
   } catch (err: unknown) {
     handleError(err);
   }

@@ -261,10 +261,10 @@ export async function up(options: UpOptions = {}): Promise<void> {
     const defaultCmd = profile.defaultCmd;
 
     if (options.shell) {
-      limaShell(vmName, { shellEnvAllowlist, command: [] });
+      process.exitCode = limaShell(vmName, { shellEnvAllowlist, command: [] });
     } else {
       const command = defaultCmd ? [defaultCmd] : [];
-      limaShell(vmName, { shellEnvAllowlist, command });
+      process.exitCode = limaShell(vmName, { shellEnvAllowlist, command });
     }
   } catch (err: unknown) {
     handleError(err);

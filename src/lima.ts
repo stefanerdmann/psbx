@@ -203,12 +203,27 @@ function limaDelete(name: string): void {
   runLimactl(['delete', name]);
 }
 
+/**
+ * Build the argv that runs `command` inside an interactive bash in the guest.
+ *
+ * Each token is quoted individually (`command.map(shellQuote).join(' ')`) so
+ * that a multi-word command like `npm run build` is parsed by bash as a
+ * command plus arguments, and arguments containing spaces (`echo "a b"`)
+ * keep their boundaries. Quoting the pre-joined string instead would make
+ * bash treat the whole thing as a single command name.
+ *
+ * An empty command yields an empty argv (an interactive login shell).
+ */
+function shellCommandArgs(command: string[]): string[] {
+  if (command.length === 0) return [];
+  return ['bash', '-i', '-c', command.map(shellQuote).join(' ')];
+}
+
 function limaShell(
   name: string,
   { shellEnvAllowlist = [], command = [] }: LimaShellOptions = {},
-): void {
-  const shellCommand =
-    command.length > 0 ? ['bash', '-i', '-c', shellQuote(command.join(' '))] : [];
+): number {
+  const shellCommand = shellCommandArgs(command);
 
   const args = ['shell', '--preserve-env', `--workdir=${GUEST_WORKDIR}`, name, ...shellCommand];
   const result = spawnSync('limactl', args, {
@@ -229,6 +244,12 @@ function limaShell(
     }
     throw error;
   }
+
+  // Propagate the in-guest command's exit status so callers (exec / up) can
+  // forward it as psbx's own exit code. A signal termination has a null
+  // status; surface it as a conventional non-zero code.
+  if (typeof result.status === 'number') return result.status;
+  return result.signal ? 1 : 0;
 }
 
 function limaStatus(name: string): string | null {
@@ -333,5 +354,6 @@ export {
   limaStop,
   limaVersion,
   limaWriteInstanceYaml,
+  shellCommandArgs,
   shellQuote,
 };
