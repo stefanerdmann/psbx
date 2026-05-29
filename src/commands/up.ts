@@ -62,6 +62,15 @@ interface CreateVmOptions extends RecreateOptions {
   label: string;
 }
 
+interface HandleExistingVmOptions {
+  vmName: string;
+  profile: Profile;
+  projectDir: string;
+  registryEntry: RegistryEntry;
+  status: string | null;
+  options: UpOptions;
+}
+
 // ---------------------------------------------------------------------------
 // psbx up
 // ---------------------------------------------------------------------------
@@ -203,72 +212,14 @@ export async function up(options: UpOptions = {}): Promise<void> {
       }
       await doRecreate({ vmName, profile, projectDir, options });
     } else {
-      // VM exists and is consistent — limactlArgs are not used
-      warnIgnoredLimactlArgs(options.limactlArgs);
-      const existingRegistryEntry = registryEntry as RegistryEntry;
-
-      // Check for projectDir mismatch
-      const realProjectDir = safeRealpath(projectDir);
-      const registryRealProjectDir = safeRealpath(existingRegistryEntry.projectDir);
-
-      if (realProjectDir !== registryRealProjectDir) {
-        console.warn(`Warning: The project directory for sandbox '${vmName}' has changed.`);
-        console.warn(`  Registry: ${existingRegistryEntry.projectDir}`);
-        console.warn(`  Current:  ${projectDir}`);
-
-        const doUpdate = await confirm(
-          `Update the project folder and registry entry to the current directory? [y/N] `,
-        );
-
-        if (doUpdate) {
-          registerVm(vmName, { ...existingRegistryEntry, projectDir });
-          console.log(`Registry entry for '${vmName}' updated to: ${projectDir}`);
-        } else {
-          console.error(
-            `Error: Sandbox '${vmName}' already exists for a different project directory.`,
-          );
-          process.exit(1);
-        }
-      }
-
-      if (status !== LimaStatus.Running) {
-        // Exists and consistent but stopped — start it
-        console.log(`Starting sandbox '${vmName}'...`);
-        limaResume(vmName);
-        limaCheckProvisioning(vmName);
-        console.log(`Sandbox '${vmName}' is running.`);
-      }
-
-      // In-place re-finalize when finalizerHash drifted but limaConfigHash
-      // still matches (mismatches were empty, so this is the case where
-      // configMounts source contents, sessions[], or guestTarget
-      // sub-fields changed without altering the rendered lima.yaml).
-      const newFinalizerHash = hashFinalizerConfig(profile);
-      if (existingRegistryEntry.finalizerHash !== newFinalizerHash) {
-        console.log(`Re-running finalizer for sandbox '${vmName}'...`);
-        finalizeVm(vmName, profile);
-        registerVm(vmName, {
-          ...existingRegistryEntry,
-          finalizerHash: newFinalizerHash,
-          finalizerStatus: FinalizerStatus.Done,
-        });
-      }
-
-      // Hot-update the runtime hashes so the registry reflects the
-      // current profile (these fields are read live, so the hash refresh
-      // is purely informational).
-      const newShellHash = hashShellEnvAllowlist(profile);
-      const newDefaultCmdHash = hashDefaultCmd(profile);
-      if (
-        existingRegistryEntry.shellEnvAllowlistHash !== newShellHash ||
-        existingRegistryEntry.defaultCmdHash !== newDefaultCmdHash
-      ) {
-        registerVm(vmName, {
-          ...existingRegistryEntry,
-          shellEnvAllowlistHash: newShellHash,
-          defaultCmdHash: newDefaultCmdHash,
-        });
-      }
+      await handleExistingConsistentVm({
+        vmName,
+        profile,
+        projectDir,
+        registryEntry: registryEntry as RegistryEntry,
+        status,
+        options,
+      });
     }
 
     // Now enter the shell. shellEnvAllowlist and defaultCmd are read live
@@ -386,3 +337,98 @@ function createVm({ vmName, profile, projectDir, options, label }: CreateVmOptio
 }
 
 export { detectMismatches, warnIgnoredLimactlArgs };
+
+/**
+ * Reconcile a moved project directory. When the current directory differs
+ * from the one recorded for the VM, prompt to update the registry; declining
+ * aborts (a name collision with another project's VM would be unsafe).
+ */
+async function reconcileProjectDir(
+  vmName: string,
+  projectDir: string,
+  registryEntry: RegistryEntry,
+): Promise<void> {
+  if (safeRealpath(projectDir) === safeRealpath(registryEntry.projectDir)) {
+    return;
+  }
+
+  console.warn(`Warning: The project directory for sandbox '${vmName}' has changed.`);
+  console.warn(`  Registry: ${registryEntry.projectDir}`);
+  console.warn(`  Current:  ${projectDir}`);
+
+  const doUpdate = await confirm(
+    'Update the project folder and registry entry to the current directory? [y/N] ',
+  );
+  if (!doUpdate) {
+    console.error(`Error: Sandbox '${vmName}' already exists for a different project directory.`);
+    process.exit(1);
+  }
+  registerVm(vmName, { ...registryEntry, projectDir });
+  console.log(`Registry entry for '${vmName}' updated to: ${projectDir}`);
+}
+
+/**
+ * Bring up a VM that already exists and is consistent with the requested
+ * config: reconcile a moved project dir, start it if stopped, re-finalize
+ * in place when finalizer inputs drifted (lima.yaml unchanged), and refresh
+ * the runtime hashes the registry stores for visibility.
+ */
+async function handleExistingConsistentVm({
+  vmName,
+  profile,
+  projectDir,
+  registryEntry,
+  status,
+  options,
+}: HandleExistingVmOptions): Promise<void> {
+  // limactlArgs only apply at creation; warn that they are ignored here.
+  warnIgnoredLimactlArgs(options.limactlArgs);
+  await reconcileProjectDir(vmName, projectDir, registryEntry);
+
+  if (status !== LimaStatus.Running) {
+    console.log(`Starting sandbox '${vmName}'...`);
+    limaResume(vmName);
+    limaCheckProvisioning(vmName);
+    console.log(`Sandbox '${vmName}' is running.`);
+  }
+
+  // In-place re-finalize when finalizerHash drifted but limaConfigHash still
+  // matches (configMounts source contents, sessions[], or guestTarget
+  // sub-fields changed without altering the rendered lima.yaml).
+  const newFinalizerHash = hashFinalizerConfig(profile);
+  if (registryEntry.finalizerHash !== newFinalizerHash) {
+    console.log(`Re-running finalizer for sandbox '${vmName}'...`);
+    finalizeVm(vmName, profile);
+    registerVm(vmName, {
+      ...registryEntry,
+      finalizerHash: newFinalizerHash,
+      finalizerStatus: FinalizerStatus.Done,
+    });
+  }
+
+  hotUpdateRuntimeHashes(vmName, profile, registryEntry);
+}
+
+/**
+ * Refresh the read-live hashes (shellEnvAllowlist, defaultCmd) so the registry
+ * reflects the current profile. These fields are consulted live at shell
+ * launch, so the refresh is purely informational drift tracking.
+ */
+function hotUpdateRuntimeHashes(
+  vmName: string,
+  profile: Profile,
+  registryEntry: RegistryEntry,
+): void {
+  const newShellHash = hashShellEnvAllowlist(profile);
+  const newDefaultCmdHash = hashDefaultCmd(profile);
+  if (
+    registryEntry.shellEnvAllowlistHash !== newShellHash ||
+    registryEntry.defaultCmdHash !== newDefaultCmdHash
+  ) {
+    registerVm(vmName, {
+      ...registryEntry,
+      shellEnvAllowlistHash: newShellHash,
+      defaultCmdHash: newDefaultCmdHash,
+    });
+  }
+}
