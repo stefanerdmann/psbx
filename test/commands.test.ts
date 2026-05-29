@@ -467,6 +467,10 @@ describe('commands', { concurrency: false }, () => {
       assert.ok(listResult.stdout.includes(cacheName), `stdout: ${listResult.stdout}`);
       assert.ok(listResult.stdout.includes('self-test'), `stdout: ${listResult.stdout}`);
       assert.ok(listResult.stdout.includes('8GiB'), `stdout: ${listResult.stdout}`);
+      // F7: a cache referenced by no VM is flagged as orphaned.
+      assert.ok(listResult.stdout.includes('USED BY'), `stdout: ${listResult.stdout}`);
+      assert.ok(listResult.stdout.includes('(orphaned)'), `stdout: ${listResult.stdout}`);
+      assert.ok(listResult.stdout.includes('referenced by no VM'), `stdout: ${listResult.stdout}`);
 
       const statusResult = run(['cache', 'status'], { HOME: home, cwd: project, env });
       assert.strictEqual(statusResult.status, 0, `stderr: ${statusResult.stderr}`);

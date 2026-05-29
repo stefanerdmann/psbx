@@ -16,7 +16,7 @@ export const DELETE_DESCRIPTION = 'Delete the matching profile cache for the cur
 import { profileCacheInputs, stopAndDeleteCache } from '../cache.ts';
 import { resolveProfile } from '../config.ts';
 import { LimaError, limaList, limaStatus } from '../lima.ts';
-import { getCacheEntry, getCacheRegistry, unregisterCache } from '../registry.ts';
+import { getCacheEntry, getCacheRegistry, getRegistry, unregisterCache } from '../registry.ts';
 import type { LimaInstance, Profile, ProfileCacheInputs } from '../types.ts';
 import { formatBytes } from '../utils.ts';
 import { confirm, handleError, resolveContext } from './helpers.ts';
@@ -77,13 +77,28 @@ export async function listCaches(): Promise<void> {
     }
 
     const vms = cacheVmMap();
+
+    // Cross-reference the VM registry: which project VMs were cloned from
+    // each cache (registryEntry.profileCacheName). Caches referenced by no
+    // VM are orphaned and can be reclaimed.
+    const usedByCache = new Map<string, string[]>();
+    for (const [vmName, entry] of Object.entries(getRegistry())) {
+      if (entry.profileCacheName) {
+        const list = usedByCache.get(entry.profileCacheName) ?? [];
+        list.push(vmName);
+        usedByCache.set(entry.profileCacheName, list);
+      }
+    }
+
     const rows = caches.map(([cacheName, entry]) => {
       const vm = vms.get(cacheName);
+      const users = usedByCache.get(cacheName) ?? [];
       return {
         name: cacheName,
         profile: entry.profile,
         status: safeLimaStatus(cacheName) || 'Missing',
         size: formatBytes(vm?.config?.disk),
+        usedBy: users.length > 0 ? users.sort().join(', ') : '(orphaned)',
       };
     });
 
@@ -91,6 +106,7 @@ export async function listCaches(): Promise<void> {
     const profileWidth = Math.max('PROFILE'.length, ...rows.map((row) => row.profile.length));
     const statusWidth = Math.max('STATUS'.length, ...rows.map((row) => row.status.length));
     const sizeWidth = Math.max('SIZE'.length, ...rows.map((row) => row.size.length));
+    const usedByWidth = Math.max('USED BY'.length, ...rows.map((row) => row.usedBy.length));
 
     console.log(
       [
@@ -98,6 +114,7 @@ export async function listCaches(): Promise<void> {
         'PROFILE'.padEnd(profileWidth),
         'STATUS'.padEnd(statusWidth),
         'SIZE'.padEnd(sizeWidth),
+        'USED BY'.padEnd(usedByWidth),
       ].join('  '),
     );
 
@@ -108,7 +125,17 @@ export async function listCaches(): Promise<void> {
           row.profile.padEnd(profileWidth),
           row.status.padEnd(statusWidth),
           row.size.padEnd(sizeWidth),
+          row.usedBy.padEnd(usedByWidth),
         ].join('  '),
+      );
+    }
+
+    const orphans = rows.filter((row) => row.usedBy === '(orphaned)');
+    if (orphans.length > 0) {
+      console.log('');
+      console.log(
+        `${orphans.length} cache(s) referenced by no VM (orphaned). ` +
+          'Reclaim with `psbx cache delete --all` or per-project `psbx cache delete`.',
       );
     }
   } catch (err: unknown) {
