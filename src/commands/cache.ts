@@ -18,7 +18,7 @@ import { resolveProfile } from '../config.ts';
 import { LimaError, limaList, limaStatus } from '../lima.ts';
 import { getCacheEntry, getCacheRegistry, getRegistry, unregisterCache } from '../registry.ts';
 import type { LimaInstance, Profile, ProfileCacheInputs } from '../types.ts';
-import { formatBytes } from '../utils.ts';
+import { formatBytes, renderTable } from '../utils.ts';
 import { confirm, handleError, resolveContext } from './helpers.ts';
 
 interface CacheCommandOptions {
@@ -102,33 +102,8 @@ export async function listCaches(): Promise<void> {
       };
     });
 
-    const nameWidth = Math.max('NAME'.length, ...rows.map((row) => row.name.length));
-    const profileWidth = Math.max('PROFILE'.length, ...rows.map((row) => row.profile.length));
-    const statusWidth = Math.max('STATUS'.length, ...rows.map((row) => row.status.length));
-    const sizeWidth = Math.max('SIZE'.length, ...rows.map((row) => row.size.length));
-    const usedByWidth = Math.max('USED BY'.length, ...rows.map((row) => row.usedBy.length));
-
-    console.log(
-      [
-        'NAME'.padEnd(nameWidth),
-        'PROFILE'.padEnd(profileWidth),
-        'STATUS'.padEnd(statusWidth),
-        'SIZE'.padEnd(sizeWidth),
-        'USED BY'.padEnd(usedByWidth),
-      ].join('  '),
-    );
-
-    for (const row of rows) {
-      console.log(
-        [
-          row.name.padEnd(nameWidth),
-          row.profile.padEnd(profileWidth),
-          row.status.padEnd(statusWidth),
-          row.size.padEnd(sizeWidth),
-          row.usedBy.padEnd(usedByWidth),
-        ].join('  '),
-      );
-    }
+    const tableRows = rows.map((row) => [row.name, row.profile, row.status, row.size, row.usedBy]);
+    console.log(renderTable(['NAME', 'PROFILE', 'STATUS', 'SIZE', 'USED BY'], tableRows));
 
     const orphans = rows.filter((row) => row.usedBy === '(orphaned)');
     if (orphans.length > 0) {

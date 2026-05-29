@@ -88,4 +88,29 @@ function workspaceMkdirTarget(workspacePath: string): string {
   return lastSlash >= 0 ? workspacePath.slice(0, lastSlash) : '.';
 }
 
-export { errorMessage, formatBytes, isPlainObject, packageRoot, shellQuote, workspaceMkdirTarget };
+/**
+ * Render a fixed-width text table. Column widths are the max of the header
+ * and all cell lengths; cells are left-aligned and joined with two spaces.
+ * The final column is not padded (avoids trailing whitespace). Returns the
+ * header row followed by each data row, joined by newlines.
+ */
+function renderTable(headers: string[], rows: string[][]): string {
+  const widths = headers.map((header, col) =>
+    Math.max(header.length, ...rows.map((row) => (row[col] ?? '').length)),
+  );
+  const formatRow = (cells: string[]): string =>
+    cells
+      .map((cell, col) => (col === cells.length - 1 ? cell : cell.padEnd(widths[col])))
+      .join('  ');
+  return [formatRow(headers), ...rows.map(formatRow)].join('\n');
+}
+
+export {
+  errorMessage,
+  formatBytes,
+  isPlainObject,
+  packageRoot,
+  renderTable,
+  shellQuote,
+  workspaceMkdirTarget,
+};

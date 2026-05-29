@@ -3,6 +3,7 @@ import { getVmName } from '../config.ts';
 import { limaStatus } from '../lima.ts';
 import { getRegistry, saveRegistry } from '../registry.ts';
 import type { RegistryEntry } from '../types.ts';
+import { renderTable } from '../utils.ts';
 import { handleError } from './helpers.ts';
 
 export const DESCRIPTION = 'List all psbx VMs';
@@ -84,33 +85,14 @@ export async function list(options: ListOptions = {}): Promise<void> {
     }
 
     // Calculate column widths for padding
-    const nameWidth = Math.max(
-      'NAME'.length,
-      ...rows.map((r) => r.name.length + (r.isCurrent ? 2 : 0)),
-    );
-    const statusWidth = Math.max('STATUS'.length, ...rows.map((r) => r.status.length));
-    const profileWidth = Math.max('PROFILE'.length, ...rows.map((r) => r.profile.length));
-
-    // Print header
-    const header = [
-      'NAME'.padEnd(nameWidth),
-      'STATUS'.padEnd(statusWidth),
-      'PROFILE'.padEnd(profileWidth),
-      'WORKDIR',
-    ].join('  ');
-    console.log(header);
-
-    // Print rows
-    for (const row of rows) {
-      const displayName = row.isCurrent ? `* ${row.name}` : row.name;
-      const line = [
-        displayName.padEnd(nameWidth),
-        row.status.padEnd(statusWidth),
-        row.profile.padEnd(profileWidth),
-        row.dir,
-      ].join('  ');
-      console.log(line);
-    }
+    const headers = ['NAME', 'STATUS', 'PROFILE', 'WORKDIR'];
+    const tableRows = rows.map((row) => [
+      row.isCurrent ? `* ${row.name}` : row.name,
+      row.status,
+      row.profile,
+      row.dir,
+    ]);
+    console.log(renderTable(headers, tableRows));
   } catch (err: unknown) {
     handleError(err);
   }
