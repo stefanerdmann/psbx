@@ -19,7 +19,7 @@ import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import YAML from 'yaml';
 import type { AppConfig, ConfigMount, EnvConfig, Profile, SessionMount } from './types.ts';
-import { isPlainObject } from './utils.ts';
+import { expandTilde, isPlainObject } from './utils.ts';
 
 const DEFAULT_CONFIG: AppConfig = {
   defaultProfile: null,
@@ -68,13 +68,7 @@ function deepMerge(
 function expandHome(filepath: string): string;
 function expandHome<T>(filepath: T): T;
 function expandHome(filepath: unknown): unknown {
-  if (typeof filepath !== 'string') {
-    return filepath;
-  }
-  if (filepath === '~' || filepath.startsWith('~/')) {
-    return filepath.replace('~', homedir());
-  }
-  return filepath;
+  return expandTilde(filepath, homedir());
 }
 
 function assertRelativeSubpath(value: string, label: string): void {

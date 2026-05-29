@@ -16,6 +16,20 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
+/**
+ * Expand a leading `~` / `~/` in a string against the given base directory.
+ * Non-strings pass through unchanged. Shared by `config.ts#expandHome` (base
+ * = host home) and `template.ts#expandGuestHome` (base = guest home).
+ */
+function expandTilde(filepath: string, base: string): string;
+function expandTilde<T>(filepath: T, base: string): T;
+function expandTilde(filepath: unknown, base: string): unknown {
+  if (typeof filepath !== 'string') return filepath;
+  if (filepath === '~') return base;
+  if (filepath.startsWith('~/')) return `${base}/${filepath.slice(2)}`;
+  return filepath;
+}
+
 /** Convert any thrown value into a human-readable message. */
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -107,6 +121,7 @@ function renderTable(headers: string[], rows: string[][]): string {
 
 export {
   errorMessage,
+  expandTilde,
   formatBytes,
   isPlainObject,
   packageRoot,

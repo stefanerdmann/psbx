@@ -18,6 +18,7 @@ import { isAbsolute, join, resolve } from 'node:path';
 import YAML from 'yaml';
 import { deepMerge, expandHome } from './config.ts';
 import type { ConfigMount, LimaConfig, LimaMount, Profile } from './types.ts';
+import { expandTilde } from './utils.ts';
 
 type ProjectOverride = Partial<Pick<LimaConfig, 'cpus' | 'memory' | 'disk'>>;
 
@@ -35,10 +36,7 @@ function mountPointFor(mount: ConfigMount): string {
 function expandGuestHome(p: string): string;
 function expandGuestHome<T>(p: T): T;
 function expandGuestHome(p: unknown): unknown {
-  if (typeof p !== 'string') return p;
-  if (p === '~') return GUEST_HOME;
-  if (p.startsWith('~/')) return `${GUEST_HOME}/${p.slice(2)}`;
-  return p;
+  return expandTilde(p, GUEST_HOME);
 }
 
 function readYamlObject<T extends Record<string, unknown> = Record<string, unknown>>(
