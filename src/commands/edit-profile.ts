@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { getProfilesDir, loadConfig } from '../config.ts';
+import { existsSync, realpathSync } from 'node:fs';
+import { join, sep } from 'node:path';
+import { assertRelativeSubpath, getProfilesDir, loadConfig } from '../config.ts';
 import { handleError } from './helpers.ts';
 
 export const DESCRIPTION = 'Open a profile in $EDITOR';
@@ -46,10 +46,23 @@ export async function editProfile(
     let target = profileDir;
 
     if (options.file) {
-      const resolved = KNOWN_FILES[options.file] || options.file;
-      target = join(profileDir, resolved);
+      const known = KNOWN_FILES[options.file];
+      if (!known) {
+        // The command's contract is "edit a file inside the profile".
+        // Reject paths that escape the profile directory (e.g.
+        // `--file ../../../etc/hosts`).
+        assertRelativeSubpath(options.file, 'profile edit --file');
+      }
+      target = join(profileDir, known || options.file);
       if (!existsSync(target)) {
         throw new Error(`File not found: ${target}`);
+      }
+      // Defense-in-depth against symlinks inside the profile that point
+      // outside it: confine the resolved target to the profile directory.
+      const realTarget = realpathSync(target);
+      const realProfileDir = realpathSync(profileDir);
+      if (realTarget !== realProfileDir && !realTarget.startsWith(realProfileDir + sep)) {
+        throw new Error(`Refusing to edit a file outside the profile directory: ${target}`);
       }
     }
 

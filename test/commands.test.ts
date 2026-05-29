@@ -155,6 +155,22 @@ describe('commands', { concurrency: false }, () => {
     }
   });
 
+  it('[cmd] profile edit --file rejects path traversal outside the profile', () => {
+    const home = mkdtempSync(join(tmpdir(), 'psbx-editprof-'));
+    try {
+      run(['profile', 'init', 'foo', '--self-test'], { HOME: home, cwd: projectDir });
+      const r = run(['profile', 'edit', 'foo', '--file', '../../../etc/hosts'], {
+        HOME: home,
+        cwd: projectDir,
+        env: { EDITOR: 'true' },
+      });
+      assert.strictEqual(r.status, 1, `stdout: ${r.stdout}`);
+      assert.ok(r.stderr.includes('relative path'), `stderr: ${r.stderr}`);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
   it('[cmd] profile delete removes a profile', () => {
     const home = mkdtempSync(join(tmpdir(), 'psbx-delprof-'));
     try {

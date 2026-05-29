@@ -392,6 +392,7 @@ function setDefaultProfile(profileName: string): AppConfig {
 }
 
 export {
+  assertRelativeSubpath,
   DEFAULT_CONFIG,
   deepMerge,
   ENV_FILE,
