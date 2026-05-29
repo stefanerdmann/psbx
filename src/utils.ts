@@ -124,7 +124,20 @@ function renderTable(headers: string[], rows: string[][]): string {
   return [formatRow(headers), ...rows.map(formatRow)].join('\n');
 }
 
+/**
+ * Wrap `text` in an ANSI color when `isTTY` is true; otherwise return it
+ * unchanged so non-terminal output (pipes, CI logs) stays clean. Centralizes
+ * color handling so escape sequences are not hand-written at call sites.
+ */
+type ColorName = 'red' | 'yellow' | 'green';
+const ANSI_CODES: Record<ColorName, number> = { red: 31, yellow: 33, green: 32 };
+function color(text: string, name: ColorName, isTTY: boolean): string {
+  if (!isTTY) return text;
+  return `\x1b[${ANSI_CODES[name]}m${text}\x1b[0m`;
+}
+
 export {
+  color,
   errorMessage,
   expandTilde,
   formatBytes,

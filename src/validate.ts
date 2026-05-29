@@ -25,7 +25,7 @@ import {
   provisionFilePaths,
 } from './template.ts';
 import type { LimaConfig, Profile, ValidationResult } from './types.ts';
-import { errorMessage } from './utils.ts';
+import { color, errorMessage } from './utils.ts';
 
 const ENV_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const MIN_LIMA_VERSION = '2.0.3';
@@ -170,21 +170,18 @@ function findCacheUnsafePath(content: string, cacheUnsafePaths: string[]): strin
 }
 
 function printValidation({ errors, warnings, info = [] }: ValidationResult): boolean {
-  const useColor = process.stderr.isTTY;
-  const red = useColor ? '[31m' : '';
-  const yellow = useColor ? '[33m' : '';
-  const reset = useColor ? '[0m' : '';
+  const useColor = Boolean(process.stderr.isTTY);
 
   for (const message of info) {
     console.log(`Info: ${message}`);
   }
 
   for (const warning of warnings) {
-    console.warn(`${yellow}Warning:${reset} ${warning}`);
+    console.warn(`${color('Warning:', 'yellow', useColor)} ${warning}`);
   }
 
   for (const error of errors) {
-    console.error(`${red}Error:${reset} ${error}`);
+    console.error(`${color('Error:', 'red', useColor)} ${error}`);
   }
 
   if ((info.length > 0 || warnings.length > 0) && errors.length === 0) {
