@@ -97,6 +97,9 @@ interface FinalizeAndRegisterOptions {
   cacheRef?: CacheRef;
 }
 
+// Process-global by design: the `-y/--yes` flag is parsed once on the root
+// command (see bin/psbx.ts preAction hook) and applies to every confirm()
+// for the lifetime of the process.
 let _globalYes = false;
 
 function setGlobalYes(val: boolean | undefined): void {

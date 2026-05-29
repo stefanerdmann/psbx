@@ -9,7 +9,7 @@ export const DESCRIPTION = 'Delete a profile';
 import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { pruneOrphanedCaches } from '../cache.ts';
-import { getProfilesDir, loadConfig } from '../config.ts';
+import { getProfilesDir } from '../config.ts';
 import { getRegistry } from '../registry.ts';
 import type { RegistryEntry } from '../types.ts';
 import { errorMessage } from '../utils.ts';
@@ -25,7 +25,6 @@ export async function deleteProfile(
   options: DeleteProfileOptions = {},
 ): Promise<void> {
   try {
-    const _config = loadConfig();
     const profilesDir = getProfilesDir();
 
     if (options.all) {
