@@ -83,6 +83,18 @@ interface ProvisionVmOptions {
   label?: string;
 }
 
+interface CacheRef {
+  cacheName: string;
+  cacheKey: string;
+}
+
+interface FinalizeAndRegisterOptions {
+  vmName: string;
+  profile: Profile;
+  projectDir: string;
+  cacheRef?: CacheRef;
+}
+
 let _globalYes = false;
 
 function hasErrorCode(err: unknown, code: string): err is Error & { code: string } {
@@ -447,11 +459,56 @@ function prepareProjectState(profile: Profile, projectDir: string): void {
   }
 }
 
+/** Print the canonical two-line "sandbox is ready" banner. */
+function printSandboxReady(vmName: string): void {
+  console.log('');
+  console.log(`Sandbox '${vmName}' is ready!`);
+  console.log('Run `psbx exec` to run a command, or `psbx up` to enter the default shell.');
+}
+
+/**
+ * Shared tail of every create/recreate path: register the VM as `pending`
+ * (so cleanup works if finalization fails), wait for provisioning, run the
+ * finalizer, re-register as `done`, and print the ready banner. `cacheRef`
+ * is supplied when the VM was cloned from a profile cache.
+ */
+function finalizeAndRegister({
+  vmName,
+  profile,
+  projectDir,
+  cacheRef,
+}: FinalizeAndRegisterOptions): void {
+  const hashes = profileHashes(profile, projectDir);
+  const cacheFields = cacheRef
+    ? { profileCacheName: cacheRef.cacheName, profileCacheKey: cacheRef.cacheKey }
+    : {};
+
+  registerVm(vmName, {
+    projectDir,
+    profile: profile.name,
+    finalizerStatus: 'pending',
+    ...cacheFields,
+    ...hashes,
+  });
+
+  limaCheckProvisioning(vmName);
+  finalizeVm(vmName, profile);
+
+  registerVm(vmName, {
+    projectDir,
+    profile: profile.name,
+    finalizerStatus: 'done',
+    ...cacheFields,
+    ...hashes,
+  });
+
+  printSandboxReady(vmName);
+}
+
 /**
  * Shared "bypass-the-cache" provisioning pipeline used by `up` when extra
  * limactl arguments are supplied (which make caching unsafe). Creates a
- * temp lima.yaml, starts the VM, registers early (so cleanup works on
- * failure), then runs the finalizer and re-registers as `done`.
+ * temp lima.yaml, starts the VM, then runs the shared finalize/register tail.
  */
 function provisionVm({
   vmName,
@@ -477,33 +534,14 @@ function provisionVm({
     rmSync(tmpDir, { recursive: true, force: true });
   }
 
-  // Register early so delete/cleanup works even if provisioning fails.
-  const hashes = profileHashes(profile, projectDir);
-  registerVm(vmName, {
-    projectDir,
-    profile: profile.name,
-    finalizerStatus: 'pending',
-    ...hashes,
-  });
-
-  limaCheckProvisioning(vmName);
-  finalizeVm(vmName, profile);
-  registerVm(vmName, {
-    projectDir,
-    profile: profile.name,
-    finalizerStatus: 'done',
-    ...hashes,
-  });
-
-  console.log('');
-  console.log(`Sandbox '${vmName}' is ready!`);
-  console.log('Run `psbx exec` to run a command, or `psbx up` to enter the default shell.');
+  finalizeAndRegister({ vmName, profile, projectDir });
 }
 
 export {
   assertProjectDirMatches,
   assertVmExists,
   confirm,
+  finalizeAndRegister,
   handleError,
   hashDefaultCmd,
   hashFinalizerConfig,
@@ -511,6 +549,7 @@ export {
   hashRenderedLimaConfig,
   hashShellEnvAllowlist,
   prepareProjectState,
+  printSandboxReady,
   profileHashes,
   provisionVm,
   resolveContext,

@@ -20,13 +20,13 @@ import type { Profile, RegistryEntry } from '../types.ts';
 import { printValidation, validateConfig } from '../validate.ts';
 import {
   confirm,
+  finalizeAndRegister,
   handleError,
   hashDefaultCmd,
   hashFinalizerConfig,
   hashLimaConfig,
   hashShellEnvAllowlist,
   prepareProjectState,
-  profileHashes,
   provisionVm,
   resolveContext,
   safeRealpath,
@@ -382,30 +382,7 @@ function createVm({ vmName, profile, projectDir, options, label }: CreateVmOptio
     label,
   });
 
-  const hashes = profileHashes(profile, projectDir);
-  registerVm(vmName, {
-    projectDir,
-    profile: profile.name,
-    finalizerStatus: 'pending',
-    profileCacheName: cacheName,
-    profileCacheKey: cacheKey,
-    ...hashes,
-  });
-
-  limaCheckProvisioning(vmName);
-  finalizeVm(vmName, profile);
-  registerVm(vmName, {
-    projectDir,
-    profile: profile.name,
-    finalizerStatus: 'done',
-    profileCacheName: cacheName,
-    profileCacheKey: cacheKey,
-    ...hashes,
-  });
-
-  console.log('');
-  console.log(`Sandbox '${vmName}' is ready!`);
-  console.log('Run `psbx exec` to run a command, or `psbx up` to enter the default shell.');
+  finalizeAndRegister({ vmName, profile, projectDir, cacheRef: { cacheName, cacheKey } });
 }
 
 export { detectMismatches, warnIgnoredLimactlArgs };
