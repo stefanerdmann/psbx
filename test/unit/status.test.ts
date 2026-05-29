@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { formatBytes, upHint } from '../../src/commands/status.ts';
+import { upHint } from '../../src/commands/status.ts';
+import { formatBytes } from '../../src/utils.ts';
 
 // ---------------------------------------------------------------------------
 // formatBytes

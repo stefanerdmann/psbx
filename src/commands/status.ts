@@ -290,4 +290,4 @@ export async function status(options: StatusOptions = {}): Promise<void> {
   }
 }
 
-export { computeSyncDrift, formatBytes, tryLoadEnv, upHint };
+export { computeSyncDrift, tryLoadEnv, upHint };
