@@ -172,13 +172,14 @@ or delete the cache key for a specific profile.
 | `psbx cache status` | Show whether the current project/profile has a matching cache | `--profile <name>` |
 | `psbx cache delete` | Delete the current project/profile matching cache | `--profile <name>`, `-f, --force`, `--all` |
 | `psbx profile delete [name]` | Delete a profile (warns if in use) | `-f, --force`, `--all` |
-| `psbx profile list` | List all profiles (alias: `profile ls`) | |
+| `psbx profile list` | List all profiles (alias: `profile ls`) | `--plain` |
 | `psbx profile set-default <name>` | Set the default profile | |
 | `psbx profile edit [profile]` | Open a profile in `$EDITOR` | `--file <file>` (lima, env, or relative path) |
-| `psbx profile fork <new-profile>` | Snapshot the running current-project VM profile and guest config into a new profile, then rebase the VM to it without restart/recreate | |
+| `psbx profile fork <new-profile>` | Snapshot the running current-project VM profile and guest config into a new profile, then rebase the VM to it without restart/recreate | `--no-rebase` |
 | `psbx profile rename <src> <dest>` | Rename a profile, updating all references (default, VMs, caches) | `-f, --force` |
-| `psbx status` | Show current project VM status, environment, and sync state | |
-| `psbx list` | List registered VMs (alias: `ls`) | |
+| `psbx status` | Show current project VM status, environment, and sync state | `--json` |
+| `psbx list` | List registered VMs (alias: `ls`) | `--prune` |
+| `psbx doctor` | Diagnose the psbx setup (Lima, profiles, env allowlist) | |
 | `psbx logs` | Show cloud-init logs for the project and its cache VM (failed cache VMs are kept for inspection) | |
 | `psbx completion [shell]` | Generate shell completion scripts (bash, zsh, fish) | |
 
