@@ -52,7 +52,7 @@ import type {
   RegistryEntry,
   ResolveContextResult,
 } from '../types.ts';
-import { hasErrorCode, workspaceMkdirTarget } from '../utils.ts';
+import { errorMessage, hasErrorCode, workspaceMkdirTarget } from '../utils.ts';
 
 interface ResolveContextOptions {
   profile?: string;
@@ -133,6 +133,31 @@ function resolveContext(
   }
 
   return context;
+}
+
+interface ResolveProfileForVmOptions {
+  profileOverride?: string;
+}
+
+/**
+ * Resolve the profile bound to a VM for read-only/runtime use. Uses the
+ * explicit override if given, else the profile recorded in the registry,
+ * else the global default. Instead of throwing when the profile was deleted
+ * or renamed, returns `{ profile: null, warning }` so callers can degrade
+ * gracefully (e.g. exec still opens a shell; logs still reports the project VM).
+ */
+function resolveProfileForVm(
+  vmName: string,
+  { profileOverride }: ResolveProfileForVmOptions = {},
+): { profile: Profile | null; warning?: string } {
+  const config = loadConfig();
+  const entry = getRegistryEntry(vmName);
+  const name = profileOverride || entry?.profile || undefined;
+  try {
+    return { profile: resolveProfile(config, name) };
+  } catch (err: unknown) {
+    return { profile: null, warning: errorMessage(err) };
+  }
 }
 
 async function confirm(question: string): Promise<boolean> {
@@ -549,6 +574,7 @@ export {
   profileHashes,
   provisionVm,
   resolveContext,
+  resolveProfileForVm,
   safeRealpath,
   setGlobalYes,
   stopIfRunning,

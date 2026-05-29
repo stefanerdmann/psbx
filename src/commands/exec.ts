@@ -7,12 +7,15 @@
 
 export const DESCRIPTION = 'Run a one-off command in the sandbox (auto-starts if stopped)';
 
-import { getVmName, loadConfig, resolveProfile } from '../config.ts';
+import { getVmName } from '../config.ts';
 import { limaCheckProvisioning, limaResume, limaShell } from '../lima.ts';
 import { getRegistryEntry } from '../registry.ts';
-import type { Profile } from '../types.ts';
-import { errorMessage } from '../utils.ts';
-import { assertProjectDirMatches, assertVmExists, handleError } from './helpers.ts';
+import {
+  assertProjectDirMatches,
+  assertVmExists,
+  handleError,
+  resolveProfileForVm,
+} from './helpers.ts';
 
 interface ExecOptions {
   shell?: boolean;
@@ -37,14 +40,12 @@ export async function exec(command: string[] = [], options: ExecOptions = {}): P
     // the profile is missing (deleted/renamed), fall back to passing no env
     // vars so the user can still get a shell to recover state.
     let shellEnvAllowlist: string[] = [];
-    let profile: Profile | null = null;
-    try {
-      const config = loadConfig();
-      profile = resolveProfile(config, entry?.profile);
+    const { profile, warning } = resolveProfileForVm(vmName);
+    if (profile) {
       shellEnvAllowlist = profile.shellEnvAllowlist || [];
-    } catch (err: unknown) {
+    } else {
       console.warn(
-        `Warning: Could not resolve profile for '${vmName}' (${errorMessage(err)}). Continuing without shell env allowlist.`,
+        `Warning: Could not resolve profile for '${vmName}' (${warning}). Continuing without shell env allowlist.`,
       );
     }
 

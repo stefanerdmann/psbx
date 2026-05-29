@@ -9,11 +9,9 @@ export const DESCRIPTION =
   'Show cloud-init provisioning logs for the project VM and its profile cache VM';
 
 import { profileCacheInputs } from '../cache.ts';
-import { resolveProfile } from '../config.ts';
 import { limaLogs, limaStart, limaStatus, limaStop } from '../lima.ts';
-import type { Profile } from '../types.ts';
 import { errorMessage } from '../utils.ts';
-import { handleError, resolveContext } from './helpers.ts';
+import { handleError, resolveContext, resolveProfileForVm } from './helpers.ts';
 
 interface FetchLogsResult {
   ok: boolean;
@@ -70,19 +68,16 @@ function printSection(title: string, vmName: string, result: FetchLogsResult): v
 
 export async function logs(): Promise<void> {
   try {
-    const { config, vmName } = resolveContext();
+    const { vmName } = resolveContext();
 
     const projectResult = fetchLogs(vmName);
 
     let cacheVmName: string | null = null;
     let cacheResult: FetchLogsResult = { ok: false, missing: true };
-    let profileError: unknown = null;
-    try {
-      const profile: Profile = resolveProfile(config);
+    const { profile, warning } = resolveProfileForVm(vmName);
+    if (profile) {
       cacheVmName = profileCacheInputs(profile, process.cwd()).cacheName;
       cacheResult = fetchLogs(cacheVmName);
-    } catch (err: unknown) {
-      profileError = err;
     }
 
     printSection('project VM cloud-init', vmName, projectResult);
@@ -90,7 +85,7 @@ export async function logs(): Promise<void> {
       printSection('profile cache VM cloud-init', cacheVmName, cacheResult);
     } else {
       console.log('===== profile cache VM cloud-init =====');
-      console.log(`(could not resolve profile for cwd: ${errorMessage(profileError)})`);
+      console.log(`(could not resolve profile for cwd: ${warning})`);
       console.log('');
     }
 
