@@ -25,6 +25,7 @@ import {
   provisionFilePaths,
 } from './template.ts';
 import type { LimaConfig, Profile, ValidationResult } from './types.ts';
+import { errorMessage } from './utils.ts';
 
 const ENV_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const MIN_LIMA_VERSION = '2.0.3';
@@ -73,7 +74,7 @@ function validateConfig(profile: Profile, projectDir: string): ValidationResult 
   try {
     loadProjectOverride(projectDir);
   } catch (err: unknown) {
-    errors.push(err instanceof Error ? err.message : String(err));
+    errors.push(errorMessage(err));
   }
 
   for (const varName of profile.shellEnvAllowlist) {
@@ -136,7 +137,7 @@ function validateCacheSafeProvisioning(profile: Profile, projectDir: string): st
     try {
       content = readFileSync(file, 'utf-8');
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = errorMessage(err);
       errors.push(`Could not read provisioning file ${file}: ${message}`);
       continue;
     }

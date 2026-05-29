@@ -19,7 +19,7 @@ import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import YAML from 'yaml';
 import type { AppConfig, ConfigMount, EnvConfig, Profile, SessionMount } from './types.ts';
-import { expandTilde, isPlainObject } from './utils.ts';
+import { errorMessage, expandTilde, hasErrorCode, isPlainObject } from './utils.ts';
 
 const DEFAULT_CONFIG: AppConfig = {
   defaultProfile: null,
@@ -127,8 +127,8 @@ function loadConfig(): AppConfig {
       userConfig = parsed;
     }
   } catch (err: unknown) {
-    if (!(err instanceof Error && 'code' in err && err.code === 'ENOENT')) {
-      const message = err instanceof Error ? err.message : String(err);
+    if (!hasErrorCode(err, 'ENOENT')) {
+      const message = errorMessage(err);
       throw new Error(`Could not parse ${configPath}: ${message}`);
     }
   }
@@ -295,7 +295,7 @@ function loadEnv(profileDir: string): EnvConfig {
   try {
     parsed = YAML.parse(readFileSync(envPath, 'utf-8'));
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = errorMessage(err);
     throw new Error(`Could not parse ${envPath}: ${message}`);
   }
 

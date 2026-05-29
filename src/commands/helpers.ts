@@ -52,7 +52,7 @@ import type {
   RegistryEntry,
   ResolveContextResult,
 } from '../types.ts';
-import { workspaceMkdirTarget } from '../utils.ts';
+import { hasErrorCode, workspaceMkdirTarget } from '../utils.ts';
 
 interface ResolveContextOptions {
   profile?: string;
@@ -96,10 +96,6 @@ interface FinalizeAndRegisterOptions {
 }
 
 let _globalYes = false;
-
-function hasErrorCode(err: unknown, code: string): err is Error & { code: string } {
-  return err instanceof Error && 'code' in err && err.code === code;
-}
 
 function setGlobalYes(val: boolean | undefined): void {
   _globalYes = !!val;

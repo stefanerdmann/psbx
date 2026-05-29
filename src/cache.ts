@@ -44,6 +44,7 @@ import {
   stringifyLimaConfig,
 } from './template.ts';
 import type { Profile, ProfileCacheInputs } from './types.ts';
+import { errorMessage } from './utils.ts';
 
 type CreateProfileCacheParams = ProfileCacheInputs & { profile: Profile };
 
@@ -101,7 +102,7 @@ function createProfileCache({
         createdAt: new Date().toISOString(),
         status: 'failed',
         failedAt: new Date().toISOString(),
-        failureReason: err instanceof Error ? err.message : String(err),
+        failureReason: errorMessage(err),
       });
       console.warn(
         `Warning: Profile cache '${cacheName}' failed to provision and was kept for inspection.`,

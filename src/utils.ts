@@ -35,6 +35,11 @@ function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
+/** Type guard: an Error carrying a specific `code` (e.g. Node's `ENOENT`). */
+function hasErrorCode(err: unknown, code: string): err is Error & { code: string } {
+  return err instanceof Error && 'code' in err && err.code === code;
+}
+
 /**
  * Render a size value for human display. Pass-through for strings (Lima
  * already returns formatted sizes like `"4GiB"`); converts numeric byte
@@ -123,6 +128,7 @@ export {
   errorMessage,
   expandTilde,
   formatBytes,
+  hasErrorCode,
   isPlainObject,
   packageRoot,
   renderTable,
