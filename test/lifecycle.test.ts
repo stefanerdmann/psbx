@@ -311,10 +311,9 @@ describe('lifecycle', {
   });
 
   it('[lifecycle] delete removes the VM', { timeout: 10 * 60 * 1000 }, () => {
-    const r = run(['delete'], {
+    const r = run(['delete', '-y'], {
       HOME: tmpHome,
       cwd: projectDir,
-      input: 'y\n',
       timeout: 10 * 60 * 1000,
     });
     assert.strictEqual(r.status, 0, `stderr: ${r.stderr}`);
@@ -351,10 +350,9 @@ describe('lifecycle', {
   });
 
   it('[lifecycle] delete removes the VM after full up test', { timeout: 10 * 60 * 1000 }, () => {
-    const r = run(['delete'], {
+    const r = run(['delete', '-y'], {
       HOME: tmpHome,
       cwd: projectDir,
-      input: 'y\n',
       timeout: 10 * 60 * 1000,
     });
     assert.strictEqual(r.status, 0, `stderr: ${r.stderr}`);

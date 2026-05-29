@@ -129,6 +129,17 @@ function resolveContext(
 
 async function confirm(question: string): Promise<boolean> {
   if (_globalYes) return true;
+  // Without an interactive terminal there is no one to answer the prompt.
+  // Rather than hang on a closed stdin or read an ambiguous EOF, print the
+  // question for context and abort, pointing the user at -y/--yes.
+  if (!input.isTTY) {
+    process.stdout.write(question);
+    console.log('');
+    throw new Error(
+      'Cannot prompt for confirmation without an interactive terminal. ' +
+        'Re-run with -y/--yes to proceed non-interactively.',
+    );
+  }
   const rl = readline.createInterface({ input, output });
   try {
     const answer = await rl.question(question);

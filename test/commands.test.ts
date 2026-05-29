@@ -1171,6 +1171,22 @@ process.exit(1);
     }
   });
 
+  it('[cmd] destructive prompts abort on non-interactive stdin without -y (F10)', () => {
+    const home = mkdtempSync(join(tmpdir(), 'psbx-f10-'));
+    const projDir = mkdtempSync(join(tmpdir(), 'psbx-f10-proj-'));
+    try {
+      run(['profile', 'init', 'self-test', '--self-test'], { HOME: home, cwd: projDir });
+      writeRegistry(home, projDir, { profile: 'self-test' });
+      // No `input` → stdin is a non-TTY pipe; the confirm() prompt must abort.
+      const r = run(['delete', '--all-registered'], { HOME: home, cwd: projDir });
+      assert.strictEqual(r.status, 1, `stdout: ${r.stdout}\nstderr: ${r.stderr}`);
+      assert.ok(r.stderr.includes('-y/--yes'), `stderr: ${r.stderr}`);
+    } finally {
+      rmSync(projDir, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
   // --- completion command tests ---
 
   it('[cmd] completion bash outputs a valid completion script', () => {
