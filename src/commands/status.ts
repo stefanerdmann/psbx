@@ -182,6 +182,7 @@ export async function status(options: StatusOptions = {}): Promise<void> {
 
     const vmStatus = limaStatus(vmName);
     const env = tryLoadEnv(registryEntry);
+    const profileMissing = Boolean(registryEntry?.profile) && env === null && vmStatus !== null;
     const drift =
       vmStatus !== null
         ? computeSyncDrift(registryEntry, process.cwd(), config.defaultProfile)
@@ -226,6 +227,15 @@ export async function status(options: StatusOptions = {}): Promise<void> {
         console.log(`Profile:    ${registryEntry.profile}`);
       }
       console.log(`Project:    ${registryEntry.projectDir}`);
+    }
+
+    if (profileMissing) {
+      console.log('');
+      console.log(
+        `Profile '${registryEntry?.profile}' is no longer available. ` +
+          `Re-create it with \`psbx profile init ${registryEntry?.profile}\`, ` +
+          'or rebind with `psbx up --profile <name>`.',
+      );
     }
 
     const vms: LimaInstance[] = limaList();

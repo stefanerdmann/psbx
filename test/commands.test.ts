@@ -1149,6 +1149,28 @@ process.exit(1);
     }
   });
 
+  it('[cmd] up gives actionable guidance when the registry profile is missing', () => {
+    const home = mkdtempSync(join(tmpdir(), 'psbx-f8-'));
+    const projDir = mkdtempSync(join(tmpdir(), 'psbx-f8-proj-'));
+    try {
+      // A profile must exist so config.json is created, but the VM's recorded
+      // profile ('ghost') is intentionally absent.
+      run(['profile', 'init', 'real', '--self-test'], { HOME: home, cwd: projDir });
+      writeRegistry(home, projDir, { profile: 'ghost' });
+
+      const r = run(['up'], { HOME: home, cwd: projDir, input: 'n\n' });
+      assert.strictEqual(r.status, 1, `stdout: ${r.stdout}\nstderr: ${r.stderr}`);
+      assert.ok(r.stderr.includes("was created with profile 'ghost'"), `stderr: ${r.stderr}`);
+      assert.ok(
+        r.stderr.includes('psbx profile init ghost') && r.stderr.includes('psbx up --profile'),
+        `stderr: ${r.stderr}`,
+      );
+    } finally {
+      rmSync(projDir, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
   // --- completion command tests ---
 
   it('[cmd] completion bash outputs a valid completion script', () => {

@@ -12,6 +12,7 @@ export const HELP_TEXT =
   'pin the flow to a specific phase and are mutually exclusive.';
 
 import { cloneVmFromProfileCache } from '../cache.ts';
+import { resolveProfile } from '../config.ts';
 import { finalizeVm } from '../finalize.ts';
 import { limaCheckProvisioning, limaDelete, limaResume, limaShell, limaStatus } from '../lima.ts';
 import { registerVm, unregisterVm } from '../registry.ts';
@@ -81,9 +82,24 @@ export async function up(options: UpOptions = {}): Promise<void> {
       process.exit(1);
     }
 
-    const { profile, vmName, projectDir, registryEntry } = resolveContext(options, {
-      withProfile: true,
-    });
+    const { vmName, projectDir, registryEntry, config } = resolveContext(options);
+
+    // Sticky profile: for an existing VM, default to the profile recorded in
+    // the registry unless --profile was given explicitly. If that profile was
+    // deleted/renamed, give a single actionable remediation line (F8).
+    const profileOverride = options.profile || (registryEntry?.profile ?? undefined);
+    let profile: Profile;
+    try {
+      profile = resolveProfile(config, profileOverride);
+    } catch (err: unknown) {
+      if (!options.profile && registryEntry?.profile) {
+        throw new Error(
+          `Sandbox '${vmName}' was created with profile '${registryEntry.profile}', which is no longer available.\n` +
+            `Re-create it with \`psbx profile init ${registryEntry.profile}\`, or pick another with \`psbx up --profile <name>\`.`,
+        );
+      }
+      throw err;
+    }
 
     const validation = validateConfig(profile, projectDir);
     if (!printValidation(validation)) {
