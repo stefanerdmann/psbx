@@ -1,11 +1,49 @@
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import { describe, it } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { normalizeCacheEntry, normalizeEntry } from '../../src/registry.ts';
-import type { CacheEntry, RegistryEntry } from '../../src/types.ts';
+import type { CacheEntry, ConfigFileData, RegistryEntry } from '../../src/types.ts';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const WORKER = resolve(__dirname, '..', 'fixtures', 'register-worker.ts');
 
 // ---------------------------------------------------------------------------
-// normalizeEntry
+// Cross-process atomicity (lockfile + atomic rename)
 // ---------------------------------------------------------------------------
+
+describe('concurrent registerVm', () => {
+  it('does not lose writes when many processes register at once', async () => {
+    const home = mkdtempSync(join(tmpdir(), 'psbx-conc-'));
+    try {
+      const count = 15;
+      await Promise.all(
+        Array.from(
+          { length: count },
+          (_unused, i) =>
+            new Promise<void>((res, rej) => {
+              const child = spawn(process.execPath, [WORKER, `vm${i}`], {
+                env: { ...process.env, PSBX_HOME: home },
+                stdio: 'ignore',
+              });
+              child.on('error', rej);
+              child.on('exit', (code) =>
+                code === 0 ? res() : rej(new Error(`worker exited ${code}`)),
+              );
+            }),
+        ),
+      );
+
+      const data = JSON.parse(readFileSync(join(home, 'config.json'), 'utf-8')) as ConfigFileData;
+      assert.strictEqual(Object.keys(data.vms ?? {}).length, count);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+});
 
 describe('normalizeEntry', { concurrency: true }, () => {
   it('normalizes a valid entry', () => {
