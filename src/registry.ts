@@ -26,7 +26,7 @@ import {
 import { dirname } from 'node:path';
 import { getConfigPath } from './config.ts';
 import type { CacheEntry, ConfigFileData, RegistryEntry } from './types.ts';
-import { errorMessage, hasErrorCode, isPlainObject } from './utils.ts';
+import { hasErrorCode, isPlainObject } from './utils.ts';
 
 type RegistryMap = Record<string, RegistryEntry | null>;
 type CacheRegistryMap = Record<string, CacheEntry | null>;
@@ -213,24 +213,23 @@ function loadCacheRegistry(): Record<string, CacheEntry> {
   return normalizeCaches(readConfigFile().caches);
 }
 
+/**
+ * Persist a full VM registry map. Errors propagate so create/delete/prune
+ * paths surface a failed write through the normal error path rather than
+ * silently continuing with on-disk state that disagrees with what the user
+ * was told.
+ */
 function saveRegistry(registry: RegistryMap): void {
-  try {
-    mutateConfig((data) => {
-      setMapField(data, 'vms', registry);
-    });
-  } catch (err: unknown) {
-    console.warn(`Warning: Could not save VM registry: ${errorMessage(err)}`);
-  }
+  mutateConfig((data) => {
+    setMapField(data, 'vms', registry);
+  });
 }
 
+/** Persist a full cache registry map. Errors propagate (see saveRegistry). */
 function saveCacheRegistry(caches: CacheRegistryMap): void {
-  try {
-    mutateConfig((data) => {
-      setMapField(data, 'caches', caches);
-    });
-  } catch (err: unknown) {
-    console.warn(`Warning: Could not save cache registry: ${errorMessage(err)}`);
-  }
+  mutateConfig((data) => {
+    setMapField(data, 'caches', caches);
+  });
 }
 
 function registerVm(vmName: string, entry: unknown): void {
