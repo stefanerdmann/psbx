@@ -4,7 +4,7 @@ import { handleError } from './helpers.ts';
 
 export const DESCRIPTION = 'List all profiles';
 
-interface ListProfilesOptions {
+export interface ListProfilesOptions {
   plain?: boolean;
 }
 

@@ -30,7 +30,7 @@ import {
   resolveContext,
 } from './helpers.ts';
 
-interface StatusOptions {
+export interface StatusOptions {
   json?: boolean;
 }
 

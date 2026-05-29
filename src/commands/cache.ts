@@ -21,7 +21,7 @@ import type { LimaInstance, Profile, ProfileCacheInputs } from '../types.ts';
 import { formatBytes, renderTable } from '../utils.ts';
 import { confirm, handleError, resolveContext } from './helpers.ts';
 
-interface CacheCommandOptions {
+export interface CacheCommandOptions {
   profile?: string;
   force?: boolean;
   all?: boolean;

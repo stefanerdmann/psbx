@@ -18,7 +18,7 @@ import {
   resolveProfileForVm,
 } from './helpers.ts';
 
-interface ExecOptions {
+export interface ExecOptions {
   shell?: boolean;
 }
 

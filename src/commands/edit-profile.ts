@@ -6,7 +6,7 @@ import { handleError } from './helpers.ts';
 
 export const DESCRIPTION = 'Open a profile in $EDITOR';
 
-interface EditProfileOptions {
+export interface EditProfileOptions {
   file?: string;
 }
 

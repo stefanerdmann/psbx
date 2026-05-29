@@ -15,7 +15,7 @@ export const HELP_TEXT =
   'Session data survives deletion because it lives in the project directory\n' +
   '(<projectDir>/.agents/sessions/), not inside the VM.';
 
-interface DeleteOptions {
+export interface DeleteOptions {
   force?: boolean;
   allRegistered?: boolean;
 }

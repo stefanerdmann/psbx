@@ -8,7 +8,7 @@ import { handleError } from './helpers.ts';
 
 export const DESCRIPTION = 'List all psbx VMs';
 
-interface ListOptions {
+export interface ListOptions {
   prune?: boolean;
 }
 

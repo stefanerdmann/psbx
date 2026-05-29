@@ -15,6 +15,7 @@ import {
   DESCRIPTION as CACHE_DESCRIPTION,
   LIST_DESCRIPTION as CACHE_LIST_DESCRIPTION,
   STATUS_DESCRIPTION as CACHE_STATUS_DESCRIPTION,
+  type CacheCommandOptions,
   cacheStatus,
   deleteCacheCommand,
   listCaches,
@@ -27,27 +28,32 @@ import {
 import {
   DESCRIPTION as DELETE_DESCRIPTION,
   HELP_TEXT as DELETE_HELP_TEXT,
+  type DeleteOptions,
   del,
 } from '../src/commands/delete.ts';
 import {
   DESCRIPTION as DELETE_PROFILE_DESCRIPTION,
+  type DeleteProfileOptions,
   deleteProfile,
 } from '../src/commands/delete-profile.ts';
 import { DESCRIPTION as DOCTOR_DESCRIPTION, doctor } from '../src/commands/doctor.ts';
 import {
   DESCRIPTION as EDIT_PROFILE_DESCRIPTION,
+  type EditProfileOptions,
   editProfile,
 } from '../src/commands/edit-profile.ts';
-import { DESCRIPTION as EXEC_DESCRIPTION, exec } from '../src/commands/exec.ts';
+import { DESCRIPTION as EXEC_DESCRIPTION, type ExecOptions, exec } from '../src/commands/exec.ts';
 import { setGlobalYes } from '../src/commands/helpers.ts';
 import {
   DESCRIPTION as INIT_DESCRIPTION,
   HELP_TEXT as INIT_HELP_TEXT,
+  type InitOptions,
   init,
 } from '../src/commands/init.ts';
-import { DESCRIPTION as LIST_DESCRIPTION, list } from '../src/commands/list.ts';
+import { DESCRIPTION as LIST_DESCRIPTION, type ListOptions, list } from '../src/commands/list.ts';
 import {
   DESCRIPTION as LIST_PROFILES_DESCRIPTION,
+  type ListProfilesOptions,
   listProfiles,
 } from '../src/commands/list-profile.ts';
 import { DESCRIPTION as LOGS_DESCRIPTION, logs } from '../src/commands/logs.ts';
@@ -68,12 +74,14 @@ import {
 import {
   DESCRIPTION as STATUS_DESCRIPTION,
   HELP_TEXT as STATUS_HELP_TEXT,
+  type StatusOptions,
   status,
 } from '../src/commands/status.ts';
-import { DESCRIPTION as STOP_DESCRIPTION, stop } from '../src/commands/stop.ts';
+import { DESCRIPTION as STOP_DESCRIPTION, type StopOptions, stop } from '../src/commands/stop.ts';
 import {
   DESCRIPTION as UP_DESCRIPTION,
   HELP_TEXT as UP_HELP_TEXT,
+  type UpOptions,
   up,
 } from '../src/commands/up.ts';
 import { errorMessage, packageRoot } from '../src/utils.ts';
@@ -97,59 +105,6 @@ function readVersion(): string {
 
 interface GlobalOptions {
   yes?: boolean;
-}
-
-interface UpOptions {
-  profile?: string;
-  shell?: boolean;
-  onlyCreate?: boolean;
-  onlyRecreate?: boolean;
-  onlyStart?: boolean;
-  forceRecreate?: boolean;
-}
-
-interface StopOptions {
-  force?: boolean;
-}
-
-interface ExecOptions {
-  shell?: boolean;
-}
-
-interface DeleteOptions {
-  force?: boolean;
-  allRegistered?: boolean;
-}
-
-interface CacheOptions {
-  profile?: string;
-  force?: boolean;
-  all?: boolean;
-}
-
-interface InitOptions {
-  fromProfile?: string;
-  template?: string;
-  selfTest?: boolean;
-  copyFromHost?: boolean;
-  symlinkFromHost?: boolean;
-  setAsDefault?: boolean;
-}
-
-interface ListProfilesOptions {
-  plain?: boolean;
-}
-
-interface EditProfileOptions {
-  file?: string;
-}
-
-interface StatusOptions {
-  json?: boolean;
-}
-
-interface ListOptions {
-  prune?: boolean;
 }
 
 const program = new Command();
@@ -236,7 +191,7 @@ cacheCmd
     '-p, --profile <name>',
     'Use a specific profile instead of the current project registry/default',
   )
-  .action((options: CacheOptions): Promise<void> => cacheStatus(options));
+  .action((options: CacheCommandOptions): Promise<void> => cacheStatus(options));
 
 cacheCmd
   .command('delete')
@@ -247,7 +202,7 @@ cacheCmd
   )
   .option('-f, --force', 'Skip confirmation prompt')
   .option('--all', 'Delete all profile caches')
-  .action((options: CacheOptions): Promise<void> => deleteCacheCommand(options));
+  .action((options: CacheCommandOptions): Promise<void> => deleteCacheCommand(options));
 
 // --- profile subcommand namespace -------------------------------------------
 const profileCmd = program
@@ -294,7 +249,7 @@ profileCmd
   .option('-f, --force', 'Skip confirmation prompt')
   .option('--all', 'Delete all profiles')
   .action(
-    (name: string | undefined, options: DeleteOptions): Promise<void> =>
+    (name: string | undefined, options: DeleteProfileOptions): Promise<void> =>
       deleteProfile(name, options),
   );
 

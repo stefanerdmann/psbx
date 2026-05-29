@@ -4,7 +4,7 @@ import { assertVmExists, handleError, resolveContext } from './helpers.ts';
 
 export const DESCRIPTION = 'Stop a running VM';
 
-interface StopOptions {
+export interface StopOptions {
   force?: boolean;
 }
 

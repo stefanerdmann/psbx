@@ -39,7 +39,7 @@ import type { AppConfig, ConfigMount } from '../types.ts';
 import { errorMessage, packageRoot } from '../utils.ts';
 import { handleError } from './helpers.ts';
 
-interface InitOptions {
+export interface InitOptions {
   fromProfile?: string;
   template?: string;
   selfTest?: boolean;

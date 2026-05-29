@@ -15,7 +15,7 @@ import type { RegistryEntry } from '../types.ts';
 import { errorMessage } from '../utils.ts';
 import { confirm, handleError } from './helpers.ts';
 
-interface DeleteProfileOptions {
+export interface DeleteProfileOptions {
   force?: boolean;
   all?: boolean;
 }

@@ -33,7 +33,7 @@ import {
   stopIfRunning,
 } from './helpers.ts';
 
-interface UpOptions {
+export interface UpOptions {
   profile?: string;
   shell?: boolean;
   onlyCreate?: boolean;
