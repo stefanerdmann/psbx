@@ -311,7 +311,7 @@ describe('lifecycle', {
   });
 
   it('[lifecycle] delete removes the VM', { timeout: 10 * 60 * 1000 }, () => {
-    const r = run(['delete', '-y'], {
+    const r = run(['-y', 'delete'], {
       HOME: tmpHome,
       cwd: projectDir,
       timeout: 10 * 60 * 1000,
@@ -350,7 +350,7 @@ describe('lifecycle', {
   });
 
   it('[lifecycle] delete removes the VM after full up test', { timeout: 10 * 60 * 1000 }, () => {
-    const r = run(['delete', '-y'], {
+    const r = run(['-y', 'delete'], {
       HOME: tmpHome,
       cwd: projectDir,
       timeout: 10 * 60 * 1000,

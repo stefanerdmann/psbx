@@ -74,17 +74,21 @@ function profileConfigFinalizerScript(
   for (const shadowPath of profile.shadowPaths || []) {
     const shadow = `${shadowRoot}/${shadowPath}`;
     const target = `${GUEST_WORKDIR}/${shadowPath}`;
-    lines.push(`shadow_dir=$(realpath -m ${shellQuote(shadow)})`);
-    lines.push(`target_dir=$(realpath -m ${shellQuote(target)})`);
+    // busybox `realpath` (Alpine) has no `-m` flag, so canonicalize an
+    // existing path: create the directories first, then resolve. The escape
+    // checks still run before the bind mount, so a symlink planted in the
+    // workdir that resolves outside the shadow root / workdir is rejected.
+    lines.push(`sudo mkdir -p ${shellQuote(shadow)}`);
+    lines.push(`shadow_dir=$(realpath ${shellQuote(shadow)})`);
+    lines.push(`mkdir -p ${shellQuote(target)}`);
+    lines.push(`target_dir=$(realpath ${shellQuote(target)})`);
     lines.push(
       `case "$shadow_dir/" in ${shadowRoot}/*) ;; *) echo "psbx: shadow path escapes ${shadowRoot}: $shadow_dir" >&2; exit 1 ;; esac`,
     );
     lines.push(
       `case "$target_dir/" in ${GUEST_WORKDIR}/*) ;; *) echo "psbx: shadow target escapes ${GUEST_WORKDIR}: $target_dir" >&2; exit 1 ;; esac`,
     );
-    lines.push(`sudo mkdir -p "$shadow_dir"`);
     lines.push(`sudo chown $(id -u):$(id -g) "$shadow_dir"`);
-    lines.push(`mkdir -p "$target_dir"`);
     lines.push(`sudo mount --bind "$shadow_dir" "$target_dir"`);
   }
 
