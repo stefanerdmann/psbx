@@ -7,6 +7,8 @@
  * verbatim to `limactl` / the in-VM command.
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { Command } from 'commander';
 import {
   DELETE_DESCRIPTION as CACHE_DELETE_DESCRIPTION,
@@ -73,6 +75,24 @@ import {
   HELP_TEXT as UP_HELP_TEXT,
   up,
 } from '../src/commands/up.ts';
+import { errorMessage, packageRoot } from '../src/utils.ts';
+
+/**
+ * Read the package version from package.json at startup so `psbx --version`
+ * always matches the running build (no hardcoded, drift-prone literal).
+ */
+function readVersion(): string {
+  try {
+    const raw = readFileSync(join(packageRoot(), 'package.json'), 'utf-8');
+    const parsed = JSON.parse(raw) as { version?: unknown };
+    if (typeof parsed.version === 'string' && parsed.version) {
+      return parsed.version;
+    }
+  } catch (err: unknown) {
+    console.warn(`Warning: Could not read package version: ${errorMessage(err)}`);
+  }
+  return '0.0.0';
+}
 
 interface GlobalOptions {
   yes?: boolean;
@@ -140,7 +160,7 @@ program
     'Manage Lima VMs per working directory for project-isolated agentic coding.\n\n' +
       'State directory: ~/.psbx (override with PSBX_HOME)',
   )
-  .version('0.2.0')
+  .version(readVersion())
   .option('-y, --yes', 'Skip confirmation prompts')
   .hook('preAction', (thisCommand: Command): void => {
     setGlobalYes(thisCommand.opts<GlobalOptions>().yes);

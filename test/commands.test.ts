@@ -69,9 +69,12 @@ describe('commands', { concurrency: false }, () => {
   });
 
   it('[cmd] --version outputs the package version', () => {
+    const pkg = JSON.parse(readFileSync(resolve(__dirname, '..', 'package.json'), 'utf-8')) as {
+      version: string;
+    };
     const r = run(['--version']);
     assert.strictEqual(r.status, 0);
-    assert.ok(r.stdout.includes('0.2.0'), `stdout: ${r.stdout}`);
+    assert.ok(r.stdout.includes(pkg.version), `stdout: ${r.stdout}`);
   });
 
   it('[cmd] --help lists every command', () => {
