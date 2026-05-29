@@ -13,7 +13,7 @@
 | Requirement | Install | Why |
 |---|---|---|
 | **Lima** | `brew install lima` | Manages the Linux VMs |
-| **Node.js ≥ 26** | `brew install node` | Runs the psbx CLI (uses built-in TypeScript support) |
+| **Node.js ≥ 26** | `brew install node` | Runs the psbx CLI directly from its TypeScript sources via Node's built-in type stripping (no build step) |
 
 ## Install
 
@@ -110,7 +110,7 @@ caCerts:
 ### Where are my profiles stored?
 
 All state, including profile configuration, lives under `~/.psbx` by default.
-You and set `PSBX_HOME` to use a different location, e.g.:
+You can set `PSBX_HOME` to use a different location, e.g.:
 
 ```bash
 export PSBX_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/psbx"
@@ -197,7 +197,15 @@ Running `psbx up` creates a `.agents/` directory (and optionally
 
 ## Development
 
-The source is TypeScript. Node.js ≥ 26 has built-in type stripping, so you can run `.ts` files directly during development — no compilation step needed in the dev loop.
+The source is TypeScript and is executed **directly** — there is no
+ahead-of-time transpile in the run path. psbx relies on Node's built-in
+TypeScript support (type stripping) plus `.ts` import specifiers, so the
+`>=26.0.0` engine constraint in `package.json` is intentional, not a typo: it
+is the floor at which running `.ts` files (and importing them with explicit
+`.ts` extensions) works unflagged. Type-only syntax is enforced via
+`erasableSyntaxOnly` in `tsconfig.json`, which keeps the sources strippable.
+During development you can therefore run `.ts` files directly — no compilation
+step needed in the dev loop:
 
 ```bash
 node bin/psbx.ts --help        # run directly from source
