@@ -478,7 +478,7 @@ function assertSafeAgentDir(projectDir: string): void {
 function prepareProjectState(profile: Profile, projectDir: string): void {
   assertSafeAgentDir(projectDir);
   for (const session of profile.sessions || []) {
-    // Trailing slash → directory; no trailing slash → file (create parent only).
+    // Trailing-slash convention: see SessionMount.workspacePath in types.ts.
     mkdirSync(join(projectDir, workspaceMkdirTarget(session.workspacePath)), {
       recursive: true,
     });

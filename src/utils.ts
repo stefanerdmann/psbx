@@ -94,10 +94,10 @@ function packageRoot(): string {
  * Given a `sessions.workspacePath` value, return the directory path that
  * must be created with `mkdir -p` on both the host and the guest.
  *
- * Semantics (trailing-slash convention):
+ * The trailing-slash convention (directory vs file path) is documented
+ * canonically on `SessionMount.workspacePath` in `types.ts`:
  *   - Trailing slash  → directory path → create it directly.
- *   - No trailing slash → file path   → create only its parent directory;
- *                                        the file itself is the agent tool's responsibility.
+ *   - No trailing slash → file path   → create only its parent directory.
  */
 function workspaceMkdirTarget(workspacePath: string): string {
   if (workspacePath.endsWith('/')) {

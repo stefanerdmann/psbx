@@ -38,7 +38,7 @@ function profileConfigFinalizerScript(
 
   // Pass 1: mkdir workdir session dirs
   for (const session of profile.sessions || []) {
-    // Trailing slash → directory; no trailing slash → file (create parent only).
+    // Trailing-slash convention: see SessionMount.workspacePath in types.ts.
     lines.push(
       `mkdir -p ${shellQuote(guestProjectPath(workspaceMkdirTarget(session.workspacePath)))}`,
     );
