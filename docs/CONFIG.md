@@ -54,13 +54,21 @@ environment variables to forward.
 Example for the default `pi-in-ubuntu` profile template:
 
 ```yaml
+defaultCmd: pi
+
 configMounts:
   - source: pi/agent
     name: agent
     guestTarget: ~/.pi/agent
-    sessions:
-      workspacePath: .agents/pi-sessions
-      guestSymlink: ~/.pi/agents/sessions
+    driftDetectionExcludes:
+      - npm/node_modules
+
+sessions:
+  - workspacePath: .agents/pi-sessions/
+    guestSymlink: ~/.pi/agent/sessions/
+
+shadowPaths:
+  - node_modules
 
 shellEnvAllowlist:
   # - GHE_MCP_TOKEN
@@ -73,10 +81,11 @@ configMounts:
   - source: copilot
     name: copilot
     guestTarget: ~/.copilot
-    sessions:
-      workspacePath: .agents/copilot-sessions/session-state
-      guestSymlink: ~/.copilot/session-state
     exfiltrateExcludes: [session-state, session-store.db, logs, ide]
+
+sessions:
+  - workspacePath: .agents/copilot-sessions/session-state/
+    guestSymlink: ~/.copilot/session-state/
 
 shellEnvAllowlist:
   # - COPILOT_GITHUB_TOKEN
@@ -89,30 +98,79 @@ configMounts:
   - source: opencode
     name: opencode
     guestTarget: ~/.config/opencode
-    sessions:
-      workspacePath: .agents/opencode-sessions
-      guestSymlink: ~/.config/opencode/sessions
     exfiltrateExcludes: [sessions, logs]
+
+sessions:
+  - workspacePath: .agents/opencode-sessions/
+    guestSymlink: ~/.config/opencode/sessions/
 
 shellEnvAllowlist:
   # - ANTHROPIC_API_KEY
   # - OPENAI_API_KEY
 ```
 
-### `configMounts` fields
+### `env.yaml` top-level fields
 
-| Field | Required | Purpose |
-|---|---|---|
-| `source` | yes | Profile-relative path to the host config directory. |
-| `name` | yes | Mount-point segment under `/mnt/host-config/<name>`. Must match `[A-Za-z0-9._-]+`. |
-| `guestTarget` | yes | Absolute or `~`-prefixed path inside the VM that finalization should populate from the mount. Used by `profile fork` to know where to read back. |
-| `sessions.workspacePath` | no | Workspace-relative directory created under the project (e.g., `.agents/pi-sessions`). When `sessions.guestSymlink` is also set, this is where the symlink points. |
-| `sessions.guestSymlink` | no | Absolute or `~`-prefixed guest path that finalization replaces with a symlink to `sessions.workspacePath`. Any existing file or directory at this path is removed first. |
-| `exfiltrateExcludes` | no | Subpath names to drop after `profile fork` copies the guest target back into the new profile. |
+| Field | Type | Required | Default | Purpose |
+|---|---|---|---|---|
+| `defaultCmd` | string | no | _(plain shell)_ | Command launched when `psbx up` opens the sandbox shell. Pass `--shell` to bypass it. Must be a non-empty string when present. Read live (no recreate). |
+| `shellEnvAllowlist` | string[] | no | `[]` | Host environment variables forwarded into the VM shell (see below). |
+| `configMounts` | object[] | **yes** | — | Host config directories mounted read-only and copied into the guest. Must be a non-empty array. |
+| `sessions` | object[] | no | `[]` | Persistent session data locations that survive VM rebuilds. |
+| `shadowPaths` | string[] | no | `[]` | Workdir subdirectories shadowed by guest-local bind-mounts. |
 
-`source` and `sessions.workspacePath` must be relative paths that stay inside the
-profile directory and project directory respectively; absolute paths and `..`
-segments are rejected.
+### `configMounts[]` fields
+
+| Field | Type | Required | Purpose / validation |
+|---|---|---|---|
+| `source` | string | yes | Profile-relative path to the host config directory. Must be relative and inside the profile (no leading `/`, no `..`). |
+| `name` | string | yes | Mount-point segment under `/mnt/host-config/<name>`. Must match `[A-Za-z0-9._-]+` and be unique within the profile. |
+| `guestTarget` | string | yes | Path inside the VM that finalization populates from the mount (also where `profile fork` reads back). Must be `~`, `~/<path>`, or an absolute path **under the guest home** (`/home/agent`); `..` segments and shell metacharacters are rejected. |
+| `exfiltrateExcludes` | string[] | no | Profile-relative subpaths (under `source`) dropped after `profile fork` copies the guest target back into the new profile. Each must be a relative subpath (no `/` prefix, no `..`). Use it to keep session history out of the forked profile. |
+| `driftDetectionExcludes` | string[] | no | Profile-relative subpaths (under `source`) skipped when hashing mount contents for drift detection. Each must be a relative subpath. Useful for large generated trees (e.g. `npm/node_modules`) that would otherwise slow down `psbx status`/`psbx up`. Excluding a path does **not** stop it from being mounted/copied — only from being hashed. |
+
+### `sessions[]` fields
+
+`sessions` declares where persistent runtime data lives in the project
+workspace (so it survives VM rebuilds), and optionally redirects a guest path
+to that location via a symlink.
+
+| Field | Type | Required | Purpose / validation |
+|---|---|---|---|
+| `workspacePath` | string | yes | Workspace-relative path created under the project (and mirrored in the guest workdir). Must be a relative subpath (no leading `/`, no `..`). **Trailing-slash convention** (below). |
+| `guestSymlink` | string | no | `~`/absolute guest path that finalization replaces with a symlink pointing at `workspacePath`. Any existing file/dir there is removed first. Must be a non-empty string when present. |
+
+**Trailing-slash convention for `workspacePath`:**
+
+- Ends with `/` → treated as a **directory**: the directory itself is created
+  with `mkdir -p` on both host and guest (e.g. `.agents/pi-sessions/`).
+- No trailing `/` → treated as a **file path**: only the parent directory is
+  created; the file itself is the agent tool's responsibility and does not
+  exist on VM creation (e.g. `.agents/state.db`).
+
+### `shadowPaths` entries
+
+`shadowPaths` lists workdir-relative subdirectories that are covered by a
+guest-local bind-mount (over `~/workdir/<path>`), backed by
+`/var/lib/psbx/shadows/<path>` inside the VM. This keeps build artifacts such
+as `node_modules` or `.venv` **inside the guest filesystem** rather than on the
+shared host mount, avoiding host/guest architecture mismatches and
+cross-filesystem hardlink errors.
+
+| Field | Type | Required | Default | Purpose / validation |
+|---|---|---|---|---|
+| `shadowPaths` | string[] | no | `[]` | Workdir-relative subpaths. Each must be a relative subpath (no leading `/`, no `..`), free of shell metacharacters, and unique within the list. |
+
+```yaml
+shadowPaths:
+  - node_modules
+  - .venv
+```
+
+Validation summary: `source`, `sessions[].workspacePath`, `exfiltrateExcludes`,
+`driftDetectionExcludes`, and `shadowPaths` must be relative paths that stay
+inside their parent directory — absolute paths and `..` segments are rejected.
+`guestTarget` may be absolute but only under the guest home (`/home/agent`).
 
 A default profile is set automatically when you create your first profile, or explicitly via `psbx profile set-default <profile-name>`. It is used when `psbx up` creates a **new** VM (i.e. no existing registry entry for the current project). For existing VMs, `psbx up` automatically uses the profile recorded in the registry entry ("sticky profile"), so you don't need to repeat `--profile` on every invocation. Pass `--profile <name>` explicitly to override this behavior and switch to a different profile. The name of the default profile is stored in `~/.psbx/config.json`, alongside information about the currently created VMs that are under management of psbx.
 
