@@ -92,9 +92,19 @@ describe('commands', { concurrency: false }, () => {
       'list',
       'logs',
       'completion',
+      'doctor',
     ]) {
       assert.ok(r.stdout.includes(cmd), `"${cmd}" missing from help:\n${r.stdout}`);
     }
+  });
+
+  it('[cmd] doctor reports default profile and per-profile env.yaml validity', () => {
+    const r = run(['doctor'], { HOME: tmpHome, cwd: projectDir });
+    // limactl is absent in CI, so doctor exits 1, but it still reports the
+    // profile and allowlist diagnostics.
+    assert.ok(r.stdout.includes('Default profile:'), `stdout: ${r.stdout}`);
+    assert.ok(r.stdout.includes('Profiles:'), `stdout: ${r.stdout}`);
+    assert.ok(r.stdout.includes('self-test — env.yaml valid'), `stdout: ${r.stdout}`);
   });
 
   it('[cmd] profile init --self-test creates a new profile', () => {

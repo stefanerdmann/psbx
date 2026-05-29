@@ -33,6 +33,7 @@ import {
   DESCRIPTION as DELETE_PROFILE_DESCRIPTION,
   deleteProfile,
 } from '../src/commands/delete-profile.ts';
+import { DESCRIPTION as DOCTOR_DESCRIPTION, doctor } from '../src/commands/doctor.ts';
 import {
   DESCRIPTION as EDIT_PROFILE_DESCRIPTION,
   editProfile,
@@ -339,6 +340,11 @@ program
   .description(COMPLETION_DESCRIPTION)
   .addHelpText('after', `\n${COMPLETION_HELP_TEXT}`)
   .action((shell: string | undefined): Promise<void> => completion(shell));
+
+program
+  .command('doctor')
+  .description(DOCTOR_DESCRIPTION)
+  .action((): Promise<void> => doctor());
 
 program
   .command('logs')
