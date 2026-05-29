@@ -184,6 +184,24 @@ or delete the cache key for a specific profile.
 
 Global option: `-y, --yes` skips confirmation prompts.
 
+### Exit codes and scripting
+
+psbx is safe to use in scripts and CI:
+
+- **`psbx exec -- <cmd>` returns the in-guest command's exit code.** A failing
+  command inside the sandbox propagates its non-zero status as psbx's own exit
+  code, so you can chain `psbx exec` in pipelines and `&&`/`||` chains. The
+  same applies to the command launched by `psbx up` (its `defaultCmd` or the
+  `--shell` session).
+- **Multi-word commands run as written.** `psbx exec -- npm run build` executes
+  `npm run build`; arguments with spaces (`psbx exec -- echo "a b"`) keep their
+  boundaries.
+- **Destructive commands never hang on a closed stdin.** When stdin is not a
+  terminal (e.g. in CI) and `-y/--yes` was not passed, confirmation prompts
+  abort with a non-zero exit and a message telling you to re-run with
+  `-y/--yes`. Pass `-y` (or the per-command `-f/--force`) to proceed
+  non-interactively.
+
 ## Project hygiene
 
 Running `psbx up` creates a `.agents/` directory (and optionally
