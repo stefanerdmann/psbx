@@ -10,6 +10,7 @@ export const DESCRIPTION =
 
 import { profileCacheInputs } from '../cache.ts';
 import { limaLogs, limaStart, limaStatus, limaStop } from '../lima.ts';
+import { LimaStatus } from '../types.ts';
 import { errorMessage } from '../utils.ts';
 import { handleError, resolveContext, resolveProfileForVm } from './helpers.ts';
 
@@ -25,7 +26,7 @@ function fetchLogs(vmName: string): FetchLogsResult {
   if (status === null) return { ok: false, missing: true };
 
   let started = false;
-  if (status !== 'Running') {
+  if (status !== LimaStatus.Running) {
     console.error(`Starting '${vmName}' transiently to read its logs...`);
     try {
       limaStart(vmName);
@@ -40,7 +41,7 @@ function fetchLogs(vmName: string): FetchLogsResult {
   } catch (err: unknown) {
     return { ok: false, error: err };
   } finally {
-    if (started && limaStatus(vmName) === 'Running') {
+    if (started && limaStatus(vmName) === LimaStatus.Running) {
       try {
         limaStop(vmName);
       } catch (stopErr: unknown) {

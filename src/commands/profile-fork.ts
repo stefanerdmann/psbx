@@ -14,7 +14,7 @@ import { getProfilesDir, getVmName, loadConfig, resolveProfile } from '../config
 import { limaCopyFromVm, limaStatus } from '../lima.ts';
 import { getRegistryEntry, registerVm } from '../registry.ts';
 import { expandGuestHome } from '../template.ts';
-import type { ConfigMount, Profile } from '../types.ts';
+import { type ConfigMount, FinalizerStatus, LimaStatus, type Profile } from '../types.ts';
 import { errorMessage } from '../utils.ts';
 import {
   assertProjectDirMatches,
@@ -109,7 +109,7 @@ export async function profileFork(
     if (status === null) {
       throw new Error(`Sandbox '${vmName}' does not exist.`);
     }
-    if (status !== 'Running') {
+    if (status !== LimaStatus.Running) {
       throw new Error(
         `Sandbox '${vmName}' must be running to fork its profile (current status: ${status}). Start it with \`psbx up\` first.`,
       );
@@ -165,7 +165,7 @@ export async function profileFork(
         ...profileHashes(newProfile, entry.projectDir),
         // finalizerStatus stays 'done' — the running guest already reflects
         // the exfiltrated contents (we copied them out of it).
-        finalizerStatus: 'done',
+        finalizerStatus: FinalizerStatus.Done,
         finalizerHash: hashFinalizerConfig(newProfile),
       });
 

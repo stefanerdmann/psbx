@@ -45,12 +45,14 @@ import {
   stringifyLimaConfig,
   writeLimaYaml,
 } from '../template.ts';
-import type {
-  LimaConfig,
-  Profile,
-  ProfileHashes,
-  RegistryEntry,
-  ResolveContextResult,
+import {
+  FinalizerStatus,
+  type LimaConfig,
+  LimaStatus,
+  type Profile,
+  type ProfileHashes,
+  type RegistryEntry,
+  type ResolveContextResult,
 } from '../types.ts';
 import { errorMessage, hasErrorCode, workspaceMkdirTarget } from '../utils.ts';
 
@@ -264,7 +266,7 @@ function assertVmExists(vmName: string, { extraHint }: AssertVmExistsOptions = {
  * callers don't have to.
  */
 function stopIfRunning(vmName: string, { force = false }: StopIfRunningOptions = {}): void {
-  if (limaStatus(vmName) === 'Running') {
+  if (limaStatus(vmName) === LimaStatus.Running) {
     console.log(`Stopping sandbox '${vmName}'...`);
     limaStop(vmName, { force });
   }
@@ -507,7 +509,7 @@ function finalizeAndRegister({
   registerVm(vmName, {
     projectDir,
     profile: profile.name,
-    finalizerStatus: 'pending',
+    finalizerStatus: FinalizerStatus.Pending,
     ...cacheFields,
     ...hashes,
   });
@@ -518,7 +520,7 @@ function finalizeAndRegister({
   registerVm(vmName, {
     projectDir,
     profile: profile.name,
-    finalizerStatus: 'done',
+    finalizerStatus: FinalizerStatus.Done,
     ...cacheFields,
     ...hashes,
   });

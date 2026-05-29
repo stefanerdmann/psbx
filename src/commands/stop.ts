@@ -1,4 +1,5 @@
 import { limaStop } from '../lima.ts';
+import { LimaStatus } from '../types.ts';
 import { assertVmExists, handleError, resolveContext } from './helpers.ts';
 
 export const DESCRIPTION = 'Stop a running VM';
@@ -12,7 +13,7 @@ export async function stop(options: StopOptions = {}): Promise<void> {
     const { vmName } = resolveContext();
     const status = assertVmExists(vmName);
 
-    if (status !== 'Running') {
+    if (status !== LimaStatus.Running) {
       console.log(`Sandbox '${vmName}' is already stopped.`);
       return;
     }

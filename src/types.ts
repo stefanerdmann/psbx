@@ -2,9 +2,10 @@
  * Shared TypeScript interfaces for psbx configuration, registry
  * entries, profile metadata, and Lima primitives.
  *
- * This module is type-only: no runtime code lives here. The split keeps
- * cross-module imports cheap and lets the structural shape of persisted
- * data (profiles, registry, caches) be reviewed in one place.
+ * This module is almost entirely type-only. The sole runtime exports are the
+ * small status-constant objects at the bottom (`FinalizerStatus`,
+ * `CacheStatus`, `LimaStatus`), kept here so the persisted/observed status
+ * strings have a single authoritative definition shared by all consumers.
  */
 
 /**
@@ -152,3 +153,26 @@ export interface SyncDriftItem {
   message: string;
   guidance: string;
 }
+
+/**
+ * Per-VM finalizer progress stored in the registry. `Pending` means clone
+ * succeeded but the in-guest finalizer has not completed; `Done` means it has.
+ */
+export const FinalizerStatus = {
+  Pending: 'pending',
+  Done: 'done',
+} as const;
+export type FinalizerStatusValue = (typeof FinalizerStatus)[keyof typeof FinalizerStatus];
+
+/** Profile-cache build outcome stored in the cache registry. */
+export const CacheStatus = {
+  Ready: 'ready',
+  Failed: 'failed',
+} as const;
+export type CacheStatusValue = (typeof CacheStatus)[keyof typeof CacheStatus];
+
+/** Lima instance status strings psbx branches on. */
+export const LimaStatus = {
+  Running: 'Running',
+} as const;
+export type LimaStatusValue = (typeof LimaStatus)[keyof typeof LimaStatus];

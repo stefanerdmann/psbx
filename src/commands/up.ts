@@ -16,7 +16,7 @@ import { resolveProfile } from '../config.ts';
 import { finalizeVm } from '../finalize.ts';
 import { limaCheckProvisioning, limaDelete, limaResume, limaShell, limaStatus } from '../lima.ts';
 import { registerVm, unregisterVm } from '../registry.ts';
-import type { Profile, RegistryEntry } from '../types.ts';
+import { FinalizerStatus, LimaStatus, type Profile, type RegistryEntry } from '../types.ts';
 import { printValidation, validateConfig } from '../validate.ts';
 import {
   confirm,
@@ -154,7 +154,7 @@ export async function up(options: UpOptions = {}): Promise<void> {
         process.exit(1);
       }
       warnIgnoredLimactlArgs(options.limactlArgs);
-      if (status === 'Running') {
+      if (status === LimaStatus.Running) {
         console.log(`Sandbox '${vmName}' is already running.`);
         return;
       }
@@ -231,7 +231,7 @@ export async function up(options: UpOptions = {}): Promise<void> {
         }
       }
 
-      if (status !== 'Running') {
+      if (status !== LimaStatus.Running) {
         // Exists and consistent but stopped — start it
         console.log(`Starting sandbox '${vmName}'...`);
         limaResume(vmName);
@@ -250,7 +250,7 @@ export async function up(options: UpOptions = {}): Promise<void> {
         registerVm(vmName, {
           ...existingRegistryEntry,
           finalizerHash: newFinalizerHash,
-          finalizerStatus: 'done',
+          finalizerStatus: FinalizerStatus.Done,
         });
       }
 
@@ -318,7 +318,7 @@ function detectMismatches({
         // If we can't compute the hash (e.g. missing files), skip this check
       }
     }
-    if (registryEntry.finalizerStatus === 'pending') {
+    if (registryEntry.finalizerStatus === FinalizerStatus.Pending) {
       mismatches.push('profile finalization did not complete for this VM');
     }
     // Note: finalizerHash mismatch is NOT a recreate-worthy mismatch.

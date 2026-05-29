@@ -10,6 +10,7 @@ export const DESCRIPTION = 'Run a one-off command in the sandbox (auto-starts if
 import { getVmName } from '../config.ts';
 import { limaCheckProvisioning, limaResume, limaShell } from '../lima.ts';
 import { getRegistryEntry } from '../registry.ts';
+import { LimaStatus } from '../types.ts';
 import {
   assertProjectDirMatches,
   assertVmExists,
@@ -28,7 +29,7 @@ export async function exec(command: string[] = [], options: ExecOptions = {}): P
     const entry = getRegistryEntry(vmName);
     await assertProjectDirMatches(vmName, process.cwd(), entry);
 
-    if (status !== 'Running') {
+    if (status !== LimaStatus.Running) {
       console.log(`Starting sandbox '${vmName}'...`);
       limaResume(vmName);
       limaCheckProvisioning(vmName);

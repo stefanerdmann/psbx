@@ -11,7 +11,14 @@ export const HELP_TEXT =
 import { join } from 'node:path';
 import { getProfilesDir, LIMA_FILE, loadEnv } from '../config.ts';
 import { limaList, limaStatus } from '../lima.ts';
-import type { EnvConfig, LimaInstance, Profile, RegistryEntry, SyncDriftItem } from '../types.ts';
+import {
+  type EnvConfig,
+  FinalizerStatus,
+  type LimaInstance,
+  type Profile,
+  type RegistryEntry,
+  type SyncDriftItem,
+} from '../types.ts';
 import { formatBytes } from '../utils.ts';
 import {
   assertProjectDirMatches,
@@ -132,7 +139,7 @@ function computeSyncDrift(
   }
 
   // Finalizer status pending
-  if (registryEntry.finalizerStatus === 'pending') {
+  if (registryEntry.finalizerStatus === FinalizerStatus.Pending) {
     drift.push({
       field: 'finalizerStatus',
       message: 'Profile finalization did not complete',

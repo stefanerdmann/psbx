@@ -43,7 +43,7 @@ import {
   buildProjectInstanceLimaYaml,
   stringifyLimaConfig,
 } from './template.ts';
-import type { Profile, ProfileCacheInputs } from './types.ts';
+import { CacheStatus, LimaStatus, type Profile, type ProfileCacheInputs } from './types.ts';
 import { errorMessage } from './utils.ts';
 
 type CreateProfileCacheParams = ProfileCacheInputs & { profile: Profile };
@@ -100,7 +100,7 @@ function createProfileCache({
         limaVersion: limaVersionValue,
         sysprepVersion,
         createdAt: new Date().toISOString(),
-        status: 'failed',
+        status: CacheStatus.Failed,
         failedAt: new Date().toISOString(),
         failureReason: errorMessage(err),
       });
@@ -112,7 +112,7 @@ function createProfileCache({
     throw err;
   } finally {
     rmSync(tmpDir, { recursive: true, force: true });
-    if (created && limaStatus(cacheName) === 'Running') {
+    if (created && limaStatus(cacheName) === LimaStatus.Running) {
       limaStop(cacheName);
     }
   }
@@ -123,7 +123,7 @@ function createProfileCache({
     limaVersion: limaVersionValue,
     sysprepVersion,
     createdAt: new Date().toISOString(),
-    status: 'ready',
+    status: CacheStatus.Ready,
   });
 
   console.log(`Profile cache '${cacheName}' is ready.`);
@@ -131,7 +131,7 @@ function createProfileCache({
 
 function stopAndDeleteCache(cacheName: string): void {
   const status = limaStatus(cacheName);
-  if (status === 'Running') {
+  if (status === LimaStatus.Running) {
     limaStop(cacheName);
   }
   if (limaStatus(cacheName) !== null) {
@@ -170,9 +170,9 @@ function ensureProfileCache(profile: Profile, projectDir: string): ProfileCacheI
     return inputs;
   }
 
-  if (!entry || entry.cacheKey !== inputs.cacheKey || entry.status === 'failed') {
+  if (!entry || entry.cacheKey !== inputs.cacheKey || entry.status === CacheStatus.Failed) {
     const reason =
-      entry?.status === 'failed'
+      entry?.status === CacheStatus.Failed
         ? `Previous cache '${inputs.cacheName}' was kept for inspection after a failed provision; rebuilding it now.`
         : `Warning: Existing profile cache '${inputs.cacheName}' is missing valid metadata; rebuilding it.`;
     console.warn(reason);
@@ -182,7 +182,7 @@ function ensureProfileCache(profile: Profile, projectDir: string): ProfileCacheI
     return inputs;
   }
 
-  if (status === 'Running') {
+  if (status === LimaStatus.Running) {
     limaStop(inputs.cacheName);
   }
 
