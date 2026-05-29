@@ -59,7 +59,7 @@ interface StatusJsonInfo {
 function tryLoadEnv(registryEntry: RegistryEntry | null): EnvConfig | null {
   if (!registryEntry?.profile) return null;
   try {
-    const profileDir = `${getProfilesDir()}/${registryEntry.profile}`;
+    const profileDir = join(getProfilesDir(), registryEntry.profile);
     return loadEnv(profileDir);
   } catch {
     return null;
@@ -88,7 +88,7 @@ function computeSyncDrift(
 ): SyncDriftItem[] | null {
   if (!registryEntry?.profile) return null;
 
-  const profileDir = `${getProfilesDir()}/${registryEntry.profile}`;
+  const profileDir = join(getProfilesDir(), registryEntry.profile);
   let env: EnvConfig;
   try {
     env = loadEnv(profileDir);

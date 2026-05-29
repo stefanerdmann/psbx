@@ -101,7 +101,7 @@ function validateConfig(profile: Profile, projectDir: string): ValidationResult 
 
   errors.push(...validateCacheSafeProvisioning(profile, projectDir));
 
-  const projectOverridePath = `${projectDir}/${PROJECT_LIMA_PATH}`;
+  const projectOverridePath = join(projectDir, PROJECT_LIMA_PATH);
   if (existsSync(projectOverridePath)) {
     try {
       const override = loadProjectOverride(projectDir);
