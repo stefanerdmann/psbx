@@ -83,6 +83,47 @@ function assertRelativeSubpath(value: string, label: string): void {
   }
 }
 
+/**
+ * The guest user's home directory. Mirrors `GUEST_HOME` in `template.ts`;
+ * duplicated here to avoid a circular import (`template.ts` imports this
+ * module). Keep the two in sync.
+ */
+const GUEST_HOME = '/home/agent';
+
+/**
+ * Reject shell metacharacters in profile-derived paths that feed
+ * `sudo`/root operations (shadowPaths) or `mkdir -p`/`cp -a` (guestTarget).
+ * These paths are already `shellQuote`d when injected into generated scripts,
+ * so this is defense-in-depth that locks the invariant S3/S4 rely on.
+ */
+const SHELL_META = /[;&|$`\\"'<>(){}[\]*?!\n\r\t]/;
+function assertNoShellMeta(value: string, label: string): void {
+  if (SHELL_META.test(value)) {
+    throw new Error(`${label} must not contain shell metacharacters`);
+  }
+}
+
+/**
+ * Confine a `configMounts[].guestTarget`. Unlike other profile paths it is
+ * allowed to be absolute, but only within the guest home, and it must never
+ * contain `..` segments (the finalizer runs `mkdir -p`/`cp -a` against it).
+ * Accepts `~`, `~/<relative>`, or an absolute path under the guest home.
+ */
+function assertGuestTarget(value: string, label: string): void {
+  assertNoShellMeta(value, label);
+  if (value.split(/[/]+/).includes('..')) {
+    throw new Error(`${label} must not contain '..' segments`);
+  }
+  if (value === '~' || value.startsWith('~/')) {
+    return;
+  }
+  if (value !== GUEST_HOME && !value.startsWith(`${GUEST_HOME}/`)) {
+    throw new Error(
+      `${label} must be '~', '~/<path>', or an absolute path under ${GUEST_HOME} (got "${value}")`,
+    );
+  }
+}
+
 function loadConfig(): AppConfig {
   const configPath = getConfigPath();
   let userConfig: Record<string, unknown> = {};
@@ -157,6 +198,7 @@ function validateEnv(parsed: unknown, label: string): EnvConfig {
     if (typeof guestTarget !== 'string' || !guestTarget) {
       throw new Error(`${label}: configMounts[${idx}].guestTarget must be a non-empty string`);
     }
+    assertGuestTarget(guestTarget, `${label}: configMounts[${idx}].guestTarget`);
 
     const normalized: ConfigMount = { source, name, guestTarget };
 
@@ -237,6 +279,7 @@ function validateEnv(parsed: unknown, label: string): EnvConfig {
         throw new Error(`${label}: shadowPaths[${idx}] must be a non-empty string`);
       }
       assertRelativeSubpath(entry, `${label}: shadowPaths[${idx}]`);
+      assertNoShellMeta(entry, `${label}: shadowPaths[${idx}]`);
       if (seenShadow.has(entry)) {
         throw new Error(`${label}: duplicate shadowPaths entry "${entry}"`);
       }

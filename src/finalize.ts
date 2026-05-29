@@ -65,14 +65,27 @@ function profileConfigFinalizerScript(
     }
   }
 
-  // Pass 4: shadow paths — guest-local bind-mounts over workdir subdirectories
+  // Pass 4: shadow paths — guest-local bind-mounts over workdir subdirectories.
+  // shadowPaths are validated as confined relative subpaths at config-load
+  // time; as defense-in-depth (these run under sudo) we additionally
+  // canonicalize at runtime and refuse to mount anything that escapes the
+  // shadow root or the workdir (e.g. via a symlink planted in the workdir).
+  const shadowRoot = '/var/lib/psbx/shadows';
   for (const shadowPath of profile.shadowPaths || []) {
-    const shadow = `/var/lib/psbx/shadows/${shadowPath}`;
+    const shadow = `${shadowRoot}/${shadowPath}`;
     const target = `${GUEST_WORKDIR}/${shadowPath}`;
-    lines.push(`sudo mkdir -p ${shellQuote(shadow)}`);
-    lines.push(`sudo chown $(id -u):$(id -g) ${shellQuote(shadow)}`);
-    lines.push(`mkdir -p ${shellQuote(target)}`);
-    lines.push(`sudo mount --bind ${shellQuote(shadow)} ${shellQuote(target)}`);
+    lines.push(`shadow_dir=$(realpath -m ${shellQuote(shadow)})`);
+    lines.push(`target_dir=$(realpath -m ${shellQuote(target)})`);
+    lines.push(
+      `case "$shadow_dir/" in ${shadowRoot}/*) ;; *) echo "psbx: shadow path escapes ${shadowRoot}: $shadow_dir" >&2; exit 1 ;; esac`,
+    );
+    lines.push(
+      `case "$target_dir/" in ${GUEST_WORKDIR}/*) ;; *) echo "psbx: shadow target escapes ${GUEST_WORKDIR}: $target_dir" >&2; exit 1 ;; esac`,
+    );
+    lines.push(`sudo mkdir -p "$shadow_dir"`);
+    lines.push(`sudo chown $(id -u):$(id -g) "$shadow_dir"`);
+    lines.push(`mkdir -p "$target_dir"`);
+    lines.push(`sudo mount --bind "$shadow_dir" "$target_dir"`);
   }
 
   return `${lines.join('\n')}\n`;

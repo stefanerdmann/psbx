@@ -126,7 +126,7 @@ describe('validateEnv', { concurrency: true }, () => {
         validateEnv(
           {
             defaultCmd: '',
-            configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+            configMounts: [{ source: 'a', name: 'a', guestTarget: '~/a' }],
           },
           'env',
         ),
@@ -144,8 +144,8 @@ describe('validateEnv', { concurrency: true }, () => {
         validateEnv(
           {
             configMounts: [
-              { source: 'a', name: 'dup', guestTarget: '/a' },
-              { source: 'b', name: 'dup', guestTarget: '/b' },
+              { source: 'a', name: 'dup', guestTarget: '~/a' },
+              { source: 'b', name: 'dup', guestTarget: '~/b' },
             ],
           },
           'env',
@@ -271,7 +271,7 @@ describe('validateEnv', { concurrency: true }, () => {
     const result: EnvConfig = validateEnv(
       {
         shellEnvAllowlist: ['FOO', 42, '', 'BAR'],
-        configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+        configMounts: [{ source: 'a', name: 'a', guestTarget: '~/a' }],
       },
       'env',
     );
@@ -281,7 +281,7 @@ describe('validateEnv', { concurrency: true }, () => {
   it('allows undefined defaultCmd', () => {
     const result = validateEnv(
       {
-        configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+        configMounts: [{ source: 'a', name: 'a', guestTarget: '~/a' }],
       },
       'env',
     );
@@ -291,7 +291,7 @@ describe('validateEnv', { concurrency: true }, () => {
   it('defaults sessions to empty array when omitted', () => {
     const result = validateEnv(
       {
-        configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+        configMounts: [{ source: 'a', name: 'a', guestTarget: '~/a' }],
       },
       'env',
     );
@@ -301,7 +301,7 @@ describe('validateEnv', { concurrency: true }, () => {
   it('parses valid sessions array', () => {
     const result = validateEnv(
       {
-        configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+        configMounts: [{ source: 'a', name: 'a', guestTarget: '~/a' }],
         sessions: [
           { workspacePath: '.agents/sessions/', guestSymlink: '~/.pi/agent/sessions/' },
           { workspacePath: '.agents/db' },
@@ -321,7 +321,7 @@ describe('validateEnv', { concurrency: true }, () => {
       () =>
         validateEnv(
           {
-            configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+            configMounts: [{ source: 'a', name: 'a', guestTarget: '~/a' }],
             sessions: 'not-an-array',
           },
           'env',
@@ -335,7 +335,7 @@ describe('validateEnv', { concurrency: true }, () => {
       () =>
         validateEnv(
           {
-            configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+            configMounts: [{ source: 'a', name: 'a', guestTarget: '~/a' }],
             sessions: [{ workspacePath: '' }],
           },
           'env',
@@ -349,7 +349,7 @@ describe('validateEnv', { concurrency: true }, () => {
       () =>
         validateEnv(
           {
-            configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+            configMounts: [{ source: 'a', name: 'a', guestTarget: '~/a' }],
             sessions: [{ workspacePath: '.agents/sessions/', guestSymlink: '' }],
           },
           'env',
@@ -361,7 +361,7 @@ describe('validateEnv', { concurrency: true }, () => {
   it('defaults shadowPaths to empty array when omitted', () => {
     const result = validateEnv(
       {
-        configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+        configMounts: [{ source: 'a', name: 'a', guestTarget: '~/a' }],
       },
       'env',
     );
@@ -371,7 +371,7 @@ describe('validateEnv', { concurrency: true }, () => {
   it('parses valid shadowPaths', () => {
     const result = validateEnv(
       {
-        configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+        configMounts: [{ source: 'a', name: 'a', guestTarget: '~/a' }],
         shadowPaths: ['node_modules', '.venv'],
       },
       'env',
@@ -384,7 +384,7 @@ describe('validateEnv', { concurrency: true }, () => {
       () =>
         validateEnv(
           {
-            configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+            configMounts: [{ source: 'a', name: 'a', guestTarget: '~/a' }],
             shadowPaths: ['/usr/lib'],
           },
           'env',
@@ -398,7 +398,7 @@ describe('validateEnv', { concurrency: true }, () => {
       () =>
         validateEnv(
           {
-            configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+            configMounts: [{ source: 'a', name: 'a', guestTarget: '~/a' }],
             shadowPaths: ['../outside'],
           },
           'env',
@@ -412,7 +412,7 @@ describe('validateEnv', { concurrency: true }, () => {
       () =>
         validateEnv(
           {
-            configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+            configMounts: [{ source: 'a', name: 'a', guestTarget: '~/a' }],
             shadowPaths: [42],
           },
           'env',
@@ -426,7 +426,7 @@ describe('validateEnv', { concurrency: true }, () => {
       () =>
         validateEnv(
           {
-            configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+            configMounts: [{ source: 'a', name: 'a', guestTarget: '~/a' }],
             shadowPaths: ['node_modules', 'node_modules'],
           },
           'env',
@@ -440,12 +440,77 @@ describe('validateEnv', { concurrency: true }, () => {
       () =>
         validateEnv(
           {
-            configMounts: [{ source: 'a', name: 'a', guestTarget: '/a' }],
+            configMounts: [{ source: 'a', name: 'a', guestTarget: '~/a' }],
             shadowPaths: 'node_modules',
           },
           'env',
         ),
       /shadowPaths must be an array/,
+    );
+  });
+
+  // --- S3/S4: guestTarget confinement + shadowPath metacharacter rejection ---
+
+  it('accepts a guestTarget that is an absolute path under the guest home', () => {
+    const result = validateEnv(
+      {
+        configMounts: [{ source: 'a', name: 'a', guestTarget: '/home/agent/.config/app' }],
+      },
+      'env',
+    );
+    assert.strictEqual(result.configMounts[0].guestTarget, '/home/agent/.config/app');
+  });
+
+  it('rejects a guestTarget absolute path outside the guest home', () => {
+    assert.throws(
+      () =>
+        validateEnv(
+          {
+            configMounts: [{ source: 'a', name: 'a', guestTarget: '/etc/cron.d' }],
+          },
+          'env',
+        ),
+      /absolute path under \/home\/agent/,
+    );
+  });
+
+  it('rejects a guestTarget containing .. segments', () => {
+    assert.throws(
+      () =>
+        validateEnv(
+          {
+            configMounts: [{ source: 'a', name: 'a', guestTarget: '~/../../etc' }],
+          },
+          'env',
+        ),
+      /must not contain '\.\.' segments/,
+    );
+  });
+
+  it('rejects a guestTarget with shell metacharacters', () => {
+    assert.throws(
+      () =>
+        validateEnv(
+          {
+            configMounts: [{ source: 'a', name: 'a', guestTarget: '~/x;rm -rf /' }],
+          },
+          'env',
+        ),
+      /shell metacharacters/,
+    );
+  });
+
+  it('rejects a shadowPath with shell metacharacters', () => {
+    assert.throws(
+      () =>
+        validateEnv(
+          {
+            configMounts: [{ source: 'a', name: 'a', guestTarget: '~/a' }],
+            shadowPaths: ['foo$(touch pwned)'],
+          },
+          'env',
+        ),
+      /shell metacharacters/,
     );
   });
 });
