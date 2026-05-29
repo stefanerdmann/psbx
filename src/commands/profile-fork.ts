@@ -16,7 +16,12 @@ import { getRegistryEntry, registerVm } from '../registry.ts';
 import { expandGuestHome } from '../template.ts';
 import type { ConfigMount, Profile } from '../types.ts';
 import { errorMessage } from '../utils.ts';
-import { handleError, hashFinalizerConfig, profileHashes } from './helpers.ts';
+import {
+  assertProjectDirMatches,
+  handleError,
+  hashFinalizerConfig,
+  profileHashes,
+} from './helpers.ts';
 
 type CopyFromVm = typeof limaCopyFromVm;
 
@@ -97,6 +102,8 @@ export async function profileFork(
     if (!entry.profile) {
       throw new Error(`Registry entry for '${vmName}' has no associated profile.`);
     }
+
+    await assertProjectDirMatches(vmName, process.cwd(), entry);
 
     const status = limaStatus(vmName);
     if (status === null) {

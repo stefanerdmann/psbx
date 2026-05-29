@@ -45,7 +45,13 @@ import {
   stringifyLimaConfig,
   writeLimaYaml,
 } from '../template.ts';
-import type { LimaConfig, Profile, ProfileHashes, ResolveContextResult } from '../types.ts';
+import type {
+  LimaConfig,
+  Profile,
+  ProfileHashes,
+  RegistryEntry,
+  ResolveContextResult,
+} from '../types.ts';
 import { workspaceMkdirTarget } from '../utils.ts';
 
 interface ResolveContextOptions {
@@ -131,6 +137,59 @@ async function confirm(question: string): Promise<boolean> {
   } finally {
     rl.close();
   }
+}
+
+/**
+ * Resolve a path to its canonical form, falling back to the original path
+ * when it cannot be resolved (e.g. it does not exist on disk).
+ */
+function safeRealpath(p: string): string {
+  try {
+    return realpathSync(p);
+  } catch {
+    return p;
+  }
+}
+
+/**
+ * Guard against cross-project VM collisions. The VM name is derived from the
+ * project directory's basename, so two unrelated projects sharing a basename
+ * (e.g. `~/work/app` and `~/clients/app`) map to the same VM. Commands that
+ * operate on the current project's VM must confirm that the registered
+ * `projectDir` matches the directory psbx was invoked from before touching the
+ * VM, otherwise a command could silently attach to another project's sandbox.
+ *
+ * On mismatch the user is prompted (this normally means the project directory
+ * was moved on the host). Confirming updates the registered `projectDir`;
+ * declining aborts to preserve project isolation.
+ */
+async function assertProjectDirMatches(
+  vmName: string,
+  cwd: string,
+  registryEntry: RegistryEntry | null,
+): Promise<void> {
+  if (!registryEntry) return;
+  if (safeRealpath(cwd) === safeRealpath(registryEntry.projectDir)) return;
+
+  console.warn(
+    `Warning: The current directory does not match the project directory recorded for sandbox '${vmName}'.`,
+  );
+  console.warn(`  Registry: ${registryEntry.projectDir}`);
+  console.warn(`  Current:  ${cwd}`);
+  console.warn('This usually means the project directory was moved on the host, or that an');
+  console.warn('unrelated directory shares the same name and maps to the same sandbox.');
+
+  const update = await confirm(
+    'Update the registered project directory to the current directory? [y/N] ',
+  );
+  if (!update) {
+    throw new Error(
+      `Sandbox '${vmName}' is bound to a different project directory. ` +
+        'Aborting to preserve project isolation.',
+    );
+  }
+  registerVm(vmName, { ...registryEntry, projectDir: cwd });
+  console.log(`Registry entry for '${vmName}' updated to: ${cwd}`);
 }
 
 function handleError(err: unknown): never {
@@ -431,6 +490,7 @@ function provisionVm({
 }
 
 export {
+  assertProjectDirMatches,
   assertVmExists,
   confirm,
   handleError,
@@ -443,6 +503,7 @@ export {
   profileHashes,
   provisionVm,
   resolveContext,
+  safeRealpath,
   setGlobalYes,
   stopIfRunning,
 };

@@ -14,6 +14,7 @@ import { limaList, limaStatus } from '../lima.ts';
 import type { EnvConfig, LimaInstance, Profile, RegistryEntry, SyncDriftItem } from '../types.ts';
 import { formatBytes } from '../utils.ts';
 import {
+  assertProjectDirMatches,
   handleError,
   hashDefaultCmd,
   hashFinalizerConfig,
@@ -177,6 +178,7 @@ function computeSyncDrift(
 export async function status(options: StatusOptions = {}): Promise<void> {
   try {
     const { vmName, registryEntry, config } = resolveContext();
+    await assertProjectDirMatches(vmName, process.cwd(), registryEntry);
 
     const vmStatus = limaStatus(vmName);
     const env = tryLoadEnv(registryEntry);

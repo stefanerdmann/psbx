@@ -6,10 +6,15 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
-
-import { hashFinalizerConfig, hashLimaConfig } from '../../src/commands/helpers.ts';
+import {
+  assertProjectDirMatches,
+  hashFinalizerConfig,
+  hashLimaConfig,
+  setGlobalYes,
+} from '../../src/commands/helpers.ts';
 import { detectMismatches, warnIgnoredLimactlArgs } from '../../src/commands/up.ts';
 import { resolveProfile } from '../../src/config.ts';
+import { getRegistryEntry, registerVm } from '../../src/registry.ts';
 import type { Profile } from '../../src/types.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -530,6 +535,47 @@ describe('warnIgnoredLimactlArgs', { concurrency: true }, () => {
       assert.ok(warnings[0].includes('ignored'), `warning: ${warnings[0]}`);
     } finally {
       console.warn = origWarn;
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// assertProjectDirMatches (S1 — cross-project VM collision guard)
+// ---------------------------------------------------------------------------
+
+describe('assertProjectDirMatches', () => {
+  it('guards against cross-project VM collisions', async () => {
+    const home = mkdtempSync(join(tmpdir(), 'psbx-pdm-'));
+    const oldDir = mkdtempSync(join(tmpdir(), 'psbx-old-'));
+    const newDir = mkdtempSync(join(tmpdir(), 'psbx-new-'));
+    const prevHome = process.env.PSBX_HOME;
+    process.env.PSBX_HOME = home;
+    const origLog = console.log;
+    const origWarn = console.warn;
+    console.log = () => {};
+    console.warn = () => {};
+    try {
+      // null entry → no-op
+      await assert.doesNotReject(assertProjectDirMatches('vm', oldDir, null));
+
+      // matching cwd → no prompt, no change
+      registerVm('vm', { projectDir: oldDir, profile: 'default' });
+      await assertProjectDirMatches('vm', oldDir, getRegistryEntry('vm'));
+      assert.strictEqual(getRegistryEntry('vm')?.projectDir, oldDir);
+
+      // mismatch + confirmed → registry updated to current dir
+      setGlobalYes(true);
+      await assertProjectDirMatches('vm', newDir, getRegistryEntry('vm'));
+      assert.strictEqual(getRegistryEntry('vm')?.projectDir, newDir);
+    } finally {
+      setGlobalYes(false);
+      console.log = origLog;
+      console.warn = origWarn;
+      if (prevHome === undefined) delete process.env.PSBX_HOME;
+      else process.env.PSBX_HOME = prevHome;
+      rmSync(home, { recursive: true, force: true });
+      rmSync(oldDir, { recursive: true, force: true });
+      rmSync(newDir, { recursive: true, force: true });
     }
   });
 });

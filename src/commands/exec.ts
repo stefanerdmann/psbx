@@ -12,7 +12,7 @@ import { limaCheckProvisioning, limaResume, limaShell } from '../lima.ts';
 import { getRegistryEntry } from '../registry.ts';
 import type { Profile } from '../types.ts';
 import { errorMessage } from '../utils.ts';
-import { assertVmExists, handleError } from './helpers.ts';
+import { assertProjectDirMatches, assertVmExists, handleError } from './helpers.ts';
 
 interface ExecOptions {
   shell?: boolean;
@@ -22,6 +22,8 @@ export async function exec(command: string[] = [], options: ExecOptions = {}): P
   try {
     const vmName = getVmName();
     const status = assertVmExists(vmName, { extraHint: 'Create it first with `psbx up`.' });
+    const entry = getRegistryEntry(vmName);
+    await assertProjectDirMatches(vmName, process.cwd(), entry);
 
     if (status !== 'Running') {
       console.log(`Starting sandbox '${vmName}'...`);
@@ -34,7 +36,6 @@ export async function exec(command: string[] = [], options: ExecOptions = {}): P
     // effect on the next `psbx exec` without recreate or restart. If
     // the profile is missing (deleted/renamed), fall back to passing no env
     // vars so the user can still get a shell to recover state.
-    const entry = getRegistryEntry(vmName);
     let shellEnvAllowlist: string[] = [];
     let profile: Profile | null = null;
     try {

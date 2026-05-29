@@ -11,7 +11,6 @@ export const HELP_TEXT =
   'The --only-create / --only-recreate / --only-start / --force-recreate flags\n' +
   'pin the flow to a specific phase and are mutually exclusive.';
 
-import { realpathSync } from 'node:fs';
 import { cloneVmFromProfileCache } from '../cache.ts';
 import { finalizeVm } from '../finalize.ts';
 import { limaCheckProvisioning, limaDelete, limaResume, limaShell, limaStatus } from '../lima.ts';
@@ -29,6 +28,7 @@ import {
   profileHashes,
   provisionVm,
   resolveContext,
+  safeRealpath,
   stopIfRunning,
 } from './helpers.ts';
 
@@ -268,14 +268,6 @@ export async function up(options: UpOptions = {}): Promise<void> {
     }
   } catch (err: unknown) {
     handleError(err);
-  }
-}
-
-function safeRealpath(p: string): string {
-  try {
-    return realpathSync(p);
-  } catch {
-    return p;
   }
 }
 

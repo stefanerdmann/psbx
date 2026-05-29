@@ -1,6 +1,13 @@
 import { limaDelete, limaStatus } from '../lima.ts';
 import { getRegistry, unregisterVm } from '../registry.ts';
-import { assertVmExists, confirm, handleError, resolveContext, stopIfRunning } from './helpers.ts';
+import {
+  assertProjectDirMatches,
+  assertVmExists,
+  confirm,
+  handleError,
+  resolveContext,
+  stopIfRunning,
+} from './helpers.ts';
 
 export const DESCRIPTION = 'Delete a VM (with confirmation)';
 
@@ -70,8 +77,13 @@ export async function del(
       return;
     }
 
-    const vmName = vmNameArg || resolveContext().vmName;
-    await deleteOne(vmName, options);
+    if (vmNameArg) {
+      await deleteOne(vmNameArg, options);
+    } else {
+      const { vmName, projectDir, registryEntry } = resolveContext();
+      await assertProjectDirMatches(vmName, projectDir, registryEntry);
+      await deleteOne(vmName, options);
+    }
   } catch (err: unknown) {
     handleError(err);
   }
