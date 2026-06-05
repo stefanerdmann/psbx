@@ -157,6 +157,21 @@ as `node_modules` or `.venv` **inside the guest filesystem** rather than on the
 shared host mount, avoiding host/guest architecture mismatches and
 cross-filesystem hardlink errors.
 
+**Behavior when the host directory exists:** the bind-mount covers it
+completely — the guest sees only the empty shadow storage; existing host files
+under that path are invisible inside the VM.
+
+**Behavior when the host directory does not exist:** the directory is
+automatically created on the host as a side-effect of setting up the
+bind-mount. A Linux bind-mount requires its target to already exist as a
+directory, and because `~/workdir` is a writable mount of the host project
+directory there is no way to create that mount-point in the guest without
+writing through to the host. (An overlayfs over the workdir mount would avoid
+this, but adds significant complexity and has poor kernel compatibility with
+the FUSE-based filesystems Lima uses, so it has not been implemented.) The
+created directory is otherwise harmless — it simply acts as a permanent
+bind-mount target and stays empty on the host side.
+
 | Field | Type | Required | Default | Purpose / validation |
 |---|---|---|---|---|
 | `shadowPaths` | string[] | no | `[]` | Workdir-relative subpaths. Each must be a relative subpath (no leading `/`, no `..`), free of shell metacharacters, and unique within the list. |
