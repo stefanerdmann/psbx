@@ -1,7 +1,5 @@
-.planning/
-node_modules/
-legacy/
-.agents/
-.psbx/.DS_Store
+.agents/*sessions
 dist/
+node_modules/
 plans/
+.DS_Store
