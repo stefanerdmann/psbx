@@ -1,6 +1,6 @@
 {
   "name": "psbx",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "CLI tool for managing per-project Lima VMs that sandbox the pi coding agent",
   "type": "module",
   "bin": {
