@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { cacheSysprepScript, profileConfigFinalizerScript } from '../../src/finalize.ts';
+import {
+  cacheSysprepScript,
+  profileConfigFinalizerScript,
+  shadowMountScript,
+} from '../../src/finalize.ts';
 import { shellQuote } from '../../src/utils.ts';
 
 // ---------------------------------------------------------------------------
@@ -146,11 +150,54 @@ describe('profileConfigFinalizerScript', { concurrency: true }, () => {
     assert.ok(script.includes(shellQuote('/var/lib/psbx/shadows/my modules')));
     assert.ok(script.includes(shellQuote('/home/agent/workdir/my modules')));
   });
+  it('wraps mount --bind with an already-mounted guard for idempotency', () => {
+    const script = profileConfigFinalizerScript({
+      configMounts: [],
+      sessions: [],
+      shadowPaths: ['node_modules'],
+    });
+    assert.ok(
+      script.includes('if ! mountpoint -q'),
+      `expected idempotency guard; script:\n${script}`,
+    );
+    assert.ok(script.includes('sudo mount --bind'));
+  });
 });
 
 // ---------------------------------------------------------------------------
-// cacheSysprepScript (migrated from static.test.js)
+// shadowMountScript
 // ---------------------------------------------------------------------------
+
+describe('shadowMountScript', { concurrency: true }, () => {
+  it('emits set -eu and workdir mountpoint guard', () => {
+    const script = shadowMountScript({ shadowPaths: ['node_modules'] });
+    assert.ok(script.startsWith('set -eu\n'), `script:\n${script}`);
+    assert.ok(script.includes('until mountpoint -q'), `expected workdir guard; script:\n${script}`);
+    assert.ok(script.includes('/home/agent/workdir'), `expected GUEST_WORKDIR; script:\n${script}`);
+  });
+
+  it('emits bind-mount with idempotency guard for each shadow path', () => {
+    const script = shadowMountScript({ shadowPaths: ['node_modules'] });
+    assert.ok(script.includes('/var/lib/psbx/shadows/node_modules'), `script:\n${script}`);
+    assert.ok(script.includes('/home/agent/workdir/node_modules'), `script:\n${script}`);
+    assert.ok(
+      script.includes('if ! mountpoint -q'),
+      `expected idempotency guard; script:\n${script}`,
+    );
+    assert.ok(script.includes('sudo mount --bind'), `script:\n${script}`);
+  });
+
+  it('returns a script with only headers when shadowPaths is empty', () => {
+    const script = shadowMountScript({ shadowPaths: [] });
+    assert.ok(script.includes('set -eu'));
+    assert.ok(!script.includes('mount --bind'), `should have no mount lines; script:\n${script}`);
+  });
+
+  it('shell-quotes shadow paths', () => {
+    const script = shadowMountScript({ shadowPaths: ['my path'] });
+    assert.ok(script.includes(shellQuote('/var/lib/psbx/shadows/my path')), `script:\n${script}`);
+  });
+});
 
 describe('cacheSysprepScript', { concurrency: true }, () => {
   it('creates /usr/local/sbin before writing helper scripts', () => {

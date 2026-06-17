@@ -13,7 +13,7 @@ export const HELP_TEXT =
 
 import { cloneVmFromProfileCache } from '../cache.ts';
 import { resolveProfile } from '../config.ts';
-import { finalizeVm } from '../finalize.ts';
+import { finalizeVm, remountShadowPaths } from '../finalize.ts';
 import { limaCheckProvisioning, limaDelete, limaResume, limaShell, limaStatus } from '../lima.ts';
 import { registerVm, unregisterVm } from '../registry.ts';
 import { FinalizerStatus, LimaStatus, type Profile, type RegistryEntry } from '../types.ts';
@@ -170,6 +170,7 @@ export async function up(options: UpOptions = {}): Promise<void> {
       console.log(`Starting sandbox '${vmName}'...`);
       limaResume(vmName);
       limaCheckProvisioning(vmName);
+      remountShadowPaths(vmName, profile);
       console.log(`Sandbox '${vmName}' is running.`);
       return;
     }
@@ -404,6 +405,11 @@ async function handleExistingConsistentVm({
       finalizerHash: newFinalizerHash,
       finalizerStatus: FinalizerStatus.Done,
     });
+  } else if (status !== LimaStatus.Running) {
+    // Shadow bind-mounts are ephemeral (kernel mount table only) and are lost
+    // on every VM stop.  Re-apply them after every resume when the full
+    // finalizer does not run (i.e. finalizerHash is unchanged).
+    remountShadowPaths(vmName, profile);
   }
 
   hotUpdateRuntimeHashes(vmName, profile, registryEntry);

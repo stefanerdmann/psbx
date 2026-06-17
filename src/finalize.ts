@@ -66,31 +66,7 @@ function profileConfigFinalizerScript(
   }
 
   // Pass 4: shadow paths — guest-local bind-mounts over workdir subdirectories.
-  // shadowPaths are validated as confined relative subpaths at config-load
-  // time; as defense-in-depth (these run under sudo) we additionally
-  // canonicalize at runtime and refuse to mount anything that escapes the
-  // shadow root or the workdir (e.g. via a symlink planted in the workdir).
-  const shadowRoot = '/var/lib/psbx/shadows';
-  for (const shadowPath of profile.shadowPaths || []) {
-    const shadow = `${shadowRoot}/${shadowPath}`;
-    const target = `${GUEST_WORKDIR}/${shadowPath}`;
-    // busybox `realpath` (Alpine) has no `-m` flag, so canonicalize an
-    // existing path: create the directories first, then resolve. The escape
-    // checks still run before the bind mount, so a symlink planted in the
-    // workdir that resolves outside the shadow root / workdir is rejected.
-    lines.push(`sudo mkdir -p ${shellQuote(shadow)}`);
-    lines.push(`shadow_dir=$(realpath ${shellQuote(shadow)})`);
-    lines.push(`mkdir -p ${shellQuote(target)}`);
-    lines.push(`target_dir=$(realpath ${shellQuote(target)})`);
-    lines.push(
-      `case "$shadow_dir/" in ${shadowRoot}/*) ;; *) echo "psbx: shadow path escapes ${shadowRoot}: $shadow_dir" >&2; exit 1 ;; esac`,
-    );
-    lines.push(
-      `case "$target_dir/" in ${GUEST_WORKDIR}/*) ;; *) echo "psbx: shadow target escapes ${GUEST_WORKDIR}: $target_dir" >&2; exit 1 ;; esac`,
-    );
-    lines.push(`sudo chown $(id -u):$(id -g) "$shadow_dir"`);
-    lines.push(`sudo mount --bind "$shadow_dir" "$target_dir"`);
-  }
+  lines.push(...shadowMountLines(profile));
 
   return `${lines.join('\n')}\n`;
 }
@@ -177,6 +153,69 @@ rm -rf /tmp/* /var/tmp/*
 sync
 `;
 
+/**
+ * Returns the shell lines that bind-mount each shadow path.  Shared by
+ * `profileConfigFinalizerScript` (run once at creation/re-finalization) and
+ * `shadowMountScript` (run on every VM resume to restore ephemeral mounts).
+ *
+ * The `if ! mountpoint -q` guard makes the lines idempotent so they are safe
+ * to replay on a VM that was not stopped between calls.
+ *
+ * busybox `realpath` (Alpine) has no `-m` flag, so we create the directories
+ * first, then resolve.  The escape checks still run before the bind mount, so
+ * a symlink planted in the workdir that resolves outside the shadow root /
+ * workdir is rejected.
+ */
+function shadowMountLines(profile: Pick<Profile, 'shadowPaths'>): string[] {
+  const shadowRoot = '/var/lib/psbx/shadows';
+  const lines: string[] = [];
+  for (const shadowPath of profile.shadowPaths || []) {
+    const shadow = `${shadowRoot}/${shadowPath}`;
+    const target = `${GUEST_WORKDIR}/${shadowPath}`;
+    lines.push(`sudo mkdir -p ${shellQuote(shadow)}`);
+    lines.push(`shadow_dir=$(realpath ${shellQuote(shadow)})`);
+    lines.push(`mkdir -p ${shellQuote(target)}`);
+    lines.push(`target_dir=$(realpath ${shellQuote(target)})`);
+    lines.push(
+      `case "$shadow_dir/" in ${shadowRoot}/*) ;; *) echo "psbx: shadow path escapes ${shadowRoot}: $shadow_dir" >&2; exit 1 ;; esac`,
+    );
+    lines.push(
+      `case "$target_dir/" in ${GUEST_WORKDIR}/*) ;; *) echo "psbx: shadow target escapes ${GUEST_WORKDIR}: $target_dir" >&2; exit 1 ;; esac`,
+    );
+    lines.push(`sudo chown $(id -u):$(id -g) "$shadow_dir"`);
+    // Guard against double-mounting when the script is replayed on a running VM.
+    lines.push(
+      `if ! mountpoint -q "$target_dir"; then sudo mount --bind "$shadow_dir" "$target_dir"; fi`,
+    );
+  }
+  return lines;
+}
+
+/**
+ * Standalone script that re-applies all shadow bind-mounts after a VM resume.
+ * Bind mounts live only in the kernel's mount table and are lost on every VM
+ * stop; this script must be run after every `limaResume` when shadowPaths are
+ * configured.
+ */
+function shadowMountScript(profile: Pick<Profile, 'shadowPaths'>): string {
+  const lines = [
+    'set -eu',
+    `until mountpoint -q ${shellQuote(GUEST_WORKDIR)}; do sleep 1; done`,
+    ...shadowMountLines(profile),
+  ];
+  return `${lines.join('\n')}\n`;
+}
+
+/**
+ * Re-apply shadow bind-mounts for a running VM.  No-op when shadowPaths is
+ * empty.  Called after every `limaResume` so the mounts are restored after a
+ * VM stop/start cycle.
+ */
+function remountShadowPaths(vmName: string, profile: Pick<Profile, 'shadowPaths'>): void {
+  if (!profile.shadowPaths?.length) return;
+  limaShellScript(vmName, shadowMountScript(profile));
+}
+
 function finalizeVm(vmName: string, profile: Profile): void {
   limaShellScript(vmName, CLONE_IDENTITY_FINALIZER, { asRoot: true });
   limaShellScript(vmName, profileConfigFinalizerScript(profile));
@@ -195,5 +234,7 @@ export {
   cacheSysprepScript,
   finalizeVm,
   profileConfigFinalizerScript,
+  remountShadowPaths,
+  shadowMountScript,
   sysprepCacheVm,
 };

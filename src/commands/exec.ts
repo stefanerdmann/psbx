@@ -8,6 +8,7 @@
 export const DESCRIPTION = 'Run a one-off command in the sandbox (auto-starts if stopped)';
 
 import { getVmName } from '../config.ts';
+import { remountShadowPaths } from '../finalize.ts';
 import { limaCheckProvisioning, limaResume, limaShell } from '../lima.ts';
 import { getRegistryEntry } from '../registry.ts';
 import { LimaStatus } from '../types.ts';
@@ -29,17 +30,8 @@ export async function exec(command: string[] = [], options: ExecOptions = {}): P
     const entry = getRegistryEntry(vmName);
     await assertProjectDirMatches(vmName, process.cwd(), entry);
 
-    if (status !== LimaStatus.Running) {
-      console.log(`Starting sandbox '${vmName}'...`);
-      limaResume(vmName);
-      limaCheckProvisioning(vmName);
-      console.log(`Sandbox '${vmName}' is running.`);
-    }
-
-    // shellEnvAllowlist is read live from the profile so profile edits take
-    // effect on the next `psbx exec` without recreate or restart. If
-    // the profile is missing (deleted/renamed), fall back to passing no env
-    // vars so the user can still get a shell to recover state.
+    // Resolve profile early so shadow mounts can be re-applied on auto-start.
+    // If the profile is missing (deleted/renamed), degrade gracefully.
     let shellEnvAllowlist: string[] = [];
     const { profile, warning } = resolveProfileForVm(vmName);
     if (profile) {
@@ -48,6 +40,16 @@ export async function exec(command: string[] = [], options: ExecOptions = {}): P
       console.warn(
         `Warning: Could not resolve profile for '${vmName}' (${warning}). Continuing without shell env allowlist.`,
       );
+    }
+
+    if (status !== LimaStatus.Running) {
+      console.log(`Starting sandbox '${vmName}'...`);
+      limaResume(vmName);
+      limaCheckProvisioning(vmName);
+      if (profile) {
+        remountShadowPaths(vmName, profile);
+      }
+      console.log(`Sandbox '${vmName}' is running.`);
     }
 
     let finalCommand: string[];
