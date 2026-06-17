@@ -44,14 +44,12 @@ The `pi-in-ubuntu` user script:
 3. Installs `@earendil-works/pi-coding-agent` globally.
 4. Updates `.bashrc` so global npm tools are on `PATH`, CA certificates are used, and new shells start in `~/workdir`.
 
-The host profile is never mounted into the VM. Finalization copies the profile
-config mount source into `~/.pi/agent` (host-side, with symlinks resolved,
-pushed in via `limactl copy`), restricts `auth.json` permissions,
-and symlinks `~/.pi/agents/sessions` to `~/workdir/.agents/pi-sessions` so pi
-session history persists in the project directory. The copied
-`~/.pi/agent` directory is part of the VM. Changes there are lost when the VM is
-deleted unless copied back to the host profile or exfiltrated into a new
-profile with `psbx profile fork <profile>`.
+The host profile is never mounted into the VM. Finalization copies the profile config mount source 
+into `~/.pi/agent` (host-side, with symlinks resolved, pushed in via `limactl copy`) and symlinks
+`~/.pi/agents/sessions` to `~/workdir/.agents/pi-sessions` so pi session history persists in the
+project directory. The copied `~/.pi/agent` directory is part of the VM. Changes there are lost
+when the VM is deleted unless copied back to the host profile or exfiltrated into a new profile
+with `psbx profile fork <profile>`.
 
 ## copilot-in-ubuntu profile template
 
