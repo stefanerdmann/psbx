@@ -36,7 +36,7 @@ import {
 } from '../config.ts';
 import { limaGenerateJsonSchema } from '../lima.ts';
 import type { AppConfig, ConfigMount } from '../types.ts';
-import { errorMessage, packageRoot } from '../utils.ts';
+import { copyDirWithResolvedSymlinks, errorMessage, packageRoot } from '../utils.ts';
 import { handleError } from './helpers.ts';
 
 export interface InitOptions {
@@ -166,7 +166,7 @@ function copyFromHost(targetProfileDir: string, configMounts: ConfigMount[]): vo
     warnOnEscapingSymlinks(hostDir);
     const targetDir = join(targetProfileDir, mount.source);
     rmSync(targetDir, { recursive: true, force: true });
-    cpSync(hostDir, targetDir, { recursive: true, dereference: true });
+    copyDirWithResolvedSymlinks(hostDir, targetDir);
 
     for (const ex of mount.exfiltrateExcludes || []) {
       rmSync(join(targetDir, ex), { recursive: true, force: true });
@@ -189,6 +189,7 @@ function symlinkFromHost(targetProfileDir: string, configMounts: ConfigMount[]):
     const hostDir = hostDirForMount(mount);
     if (!existsSync(hostDir)) continue;
 
+    warnOnEscapingSymlinks(hostDir);
     const targetDir = join(targetProfileDir, mount.source);
     rmSync(targetDir, { recursive: true, force: true });
     mkdirSync(dirname(targetDir), { recursive: true });

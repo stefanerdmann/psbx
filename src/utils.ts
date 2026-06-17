@@ -7,9 +7,44 @@
  * error is converted to a string).
  */
 
-import { existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+/**
+ * Recursively copy `src` to `dest`, resolving every symlink (both file and
+ * directory) into the actual file or directory it points to, so the
+ * destination is self-contained (no symlinks to host paths that don't exist
+ * in the guest VM).
+ *
+ * Implemented with `cp -RL` rather than Node's `cpSync`, because
+ * `cpSync({ dereference: true })` only dereferences the top-level source and
+ * leaves *nested* symlinks verbatim. `cp -RL` dereferences recursively,
+ * preserves directory modes, and refuses cyclic symlinks (exit 1) instead of
+ * recursing forever. `-L` is available in both GNU coreutils and BSD/macOS
+ * `cp`, the only host platforms this tool supports (it requires Lima).
+ *
+ * A non-zero exit (e.g. a dangling or cyclic link that cp could not resolve)
+ * is surfaced as a warning rather than aborting: the rest of the tree is still
+ * copied best-effort, mirroring how `warnOnEscapingSymlinks` reports rather
+ * than fails. Only a failure to launch `cp` is thrown.
+ */
+function copyDirWithResolvedSymlinks(src: string, dest: string): void {
+  mkdirSync(dirname(dest), { recursive: true });
+
+  const result = spawnSync('cp', ['-RL', src, dest], { encoding: 'utf-8' });
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    const detail = (result.stderr || '').trim() || `cp exited with status ${result.status}`;
+    console.warn(
+      `Warning: copying ${src} into the profile did not fully succeed; ` +
+        `some entries may be missing.\n${detail}`,
+    );
+  }
+}
 
 /** Narrow an `unknown` to a plain (non-array, non-null) object. */
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -138,6 +173,7 @@ function color(text: string, name: ColorName, isTTY: boolean): string {
 
 export {
   color,
+  copyDirWithResolvedSymlinks,
   errorMessage,
   expandTilde,
   formatBytes,

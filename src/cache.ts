@@ -211,7 +211,7 @@ function cloneVmFromProfileCache({
   limaClone(cacheName, vmName);
   limaWriteInstanceYaml(
     vmName,
-    buildProjectInstanceLimaYaml(limaReadInstanceYaml(vmName), profile, projectDir),
+    buildProjectInstanceLimaYaml(limaReadInstanceYaml(vmName), projectDir),
   );
   limaResume(vmName);
 

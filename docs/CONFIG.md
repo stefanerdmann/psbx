@@ -46,8 +46,8 @@ Profiles live under:
 └── ... agent-specific subdirectories
 ```
 
-`env.yaml` declares the host-config subfolders the profile owns. Each entry
-is mounted read-only into the VM at `/mnt/host-config/<name>` and includes the
+`env.yaml` declares the host-config subfolders the profile owns. Each entry's
+contents are copied one-way into the VM during finalization and includes the
 guest path used by finalization and `profile fork`. It also lists which host
 environment variables to forward.
 
@@ -115,7 +115,7 @@ shellEnvAllowlist:
 |---|---|---|---|---|
 | `defaultCmd` | string | no | _(plain shell)_ | Command launched when `psbx up` opens the sandbox shell. Pass `--shell` to bypass it. Must be a non-empty string when present. Read live (no recreate). |
 | `shellEnvAllowlist` | string[] | no | `[]` | Host environment variables forwarded into the VM shell (see below). |
-| `configMounts` | object[] | **yes** | — | Host config directories mounted read-only and copied into the guest. Must be a non-empty array. |
+| `configMounts` | object[] | **yes** | — | Host config directories copied into the guest at finalization. Must be a non-empty array. |
 | `sessions` | object[] | no | `[]` | Persistent session data locations that survive VM rebuilds. |
 | `shadowPaths` | string[] | no | `[]` | Workdir subdirectories shadowed by guest-local bind-mounts. |
 
@@ -124,8 +124,8 @@ shellEnvAllowlist:
 | Field | Type | Required | Purpose / validation |
 |---|---|---|---|
 | `source` | string | yes | Profile-relative path to the host config directory. Must be relative and inside the profile (no leading `/`, no `..`). |
-| `name` | string | yes | Mount-point segment under `/mnt/host-config/<name>`. Must match `[A-Za-z0-9._-]+` and be unique within the profile. |
-| `guestTarget` | string | yes | Path inside the VM that finalization populates from the mount (also where `profile fork` reads back). Must be `~`, `~/<path>`, or an absolute path **under the guest home** (`/home/agent`); `..` segments and shell metacharacters are rejected. |
+| `name` | string | yes | Logical mount name. Must match `[A-Za-z0-9._-]+` and be unique within the profile. |
+| `guestTarget` | string | yes | Path inside the VM that finalization populates from the config mount source (also where `profile fork` reads back). Must be `~`, `~/<path>`, or an absolute path **under the guest home** (`/home/agent`); `..` segments and shell metacharacters are rejected. |
 | `exfiltrateExcludes` | string[] | no | Profile-relative subpaths (under `source`) dropped after `profile fork` copies the guest target back into the new profile. Each must be a relative subpath (no `/` prefix, no `..`). Use it to keep session history out of the forked profile. |
 | `driftDetectionExcludes` | string[] | no | Profile-relative subpaths (under `source`) skipped when hashing mount contents for drift detection. Each must be a relative subpath. Useful for large generated trees (e.g. `npm/node_modules`) that would otherwise slow down `psbx status`/`psbx up`. Excluding a path does **not** stop it from being mounted/copied — only from being hashed. |
 
@@ -238,7 +238,10 @@ Variable names must match:
 | Host | Guest | Writable |
 |---|---|---|
 | Current project directory | `~/workdir` | Yes |
-| Each profile config subfolder declared in `env.yaml`, resolved through symlinks | `/mnt/host-config/<name>` | No |
+
+Profile config subfolders declared in `env.yaml` are **not** mounted; their
+contents are copied one-way into the guest target during finalization (symlinks
+resolved on the host).
 
 Profile provisioning scripts should be referenced with Lima-native `file` entries:
 
@@ -252,7 +255,7 @@ provision:
 
 Provisioning scripts are cache-time scripts. They should install tools and
 configure the base guest only. Project-specific work such as waiting for
-`~/workdir`, copying `/mnt/host-config/<name>` into the guest target, and linking
+`~/workdir`, copying each config mount source into the guest target, and linking
 session directories is performed by psbx finalization after cloning.
 
 ### Configuration precedence
@@ -293,7 +296,7 @@ This injects host CA certificates into the VM trust store. Corporate proxy CAs a
 
 ## Pi agent configuration
 
-Everything under `~/.psbx/profiles/<profile>/pi/agent` is mounted read-only at `/mnt/host-config/agent` and copied into the guest as `~/.pi/agent` during project VM finalization. This can include, but is not limited to:
+Everything under `~/.psbx/profiles/<profile>/pi/agent` is copied into the guest as `~/.pi/agent` during project VM finalization. This can include, but is not limited to:
 
 | Content | Reference |
 |---|---|
@@ -334,9 +337,9 @@ psbx profile init opencode --template opencode-in-ubuntu --symlink-from-host
 
 The profile mounts the OpenCode config directory:
 
-| Profile path | Guest mount | Guest target | Notes |
-|---|---|---|---|
-| `opencode/` | `/mnt/host-config/opencode` (read-only) | `~/.config/opencode` | Follows the upstream [`~/.config/opencode` layout](https://opencode.ai/docs/config/) (e.g., `opencode.json`). |
+| Profile path | Guest target | Notes |
+|---|---|---|
+| `opencode/` | `~/.config/opencode` | Follows the upstream [`~/.config/opencode` layout](https://opencode.ai/docs/config/) (e.g., `opencode.json`). |
 
 During project VM finalization the directory is copied to `~/.config/opencode`
 in the guest. To keep session history with the project,
@@ -369,9 +372,9 @@ psbx profile init copilot --template copilot-in-ubuntu --symlink-from-host
 
 The profile mounts the Copilot config directory:
 
-| Profile path | Guest mount | Guest target | Notes |
-|---|---|---|---|
-| `copilot/` | `/mnt/host-config/copilot` (read-only) | `~/.copilot` | Follows the upstream [`~/.copilot` layout](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-config-dir-reference) (e.g., `settings.json`, `mcp-config.json`, `agents/`, `instructions/`, `skills/`, `hooks/`). |
+| Profile path | Guest target | Notes |
+|---|---|---|
+| `copilot/` | `~/.copilot` | Follows the upstream [`~/.copilot` layout](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-config-dir-reference) (e.g., `settings.json`, `mcp-config.json`, `agents/`, `instructions/`, `skills/`, `hooks/`). |
 
 During project VM finalization the directory is copied to `~/.copilot` in the
 guest. To keep session history with the project, `~/.copilot/session-state` is

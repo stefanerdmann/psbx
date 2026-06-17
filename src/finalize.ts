@@ -19,10 +19,13 @@
  * into the generated shell scripts.
  */
 
-import { limaShellScript } from './lima.ts';
-import { expandGuestHome, GUEST_WORKDIR, mountPointFor } from './template.ts';
+import { existsSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, posix } from 'node:path';
+import { limaCopyToVm, limaShellScript } from './lima.ts';
+import { expandGuestHome, GUEST_WORKDIR } from './template.ts';
 import type { Profile } from './types.ts';
-import { shellQuote, workspaceMkdirTarget } from './utils.ts';
+import { copyDirWithResolvedSymlinks, shellQuote, workspaceMkdirTarget } from './utils.ts';
 
 function guestProjectPath(relativePath: string): string {
   return `${GUEST_WORKDIR}/${relativePath.replace(/^\.?\//, '')}`;
@@ -44,14 +47,11 @@ function profileConfigFinalizerScript(
     );
   }
 
-  // Pass 2: copy all config mounts
+  // Pass 2: mkdir each configMount guestTarget.  The contents are delivered
+  // separately by `copyConfigMountsToGuest` (host-side `limactl copy`), which
+  // requires the target directory to already exist.
   for (const mount of profile.configMounts || []) {
-    const source = mountPointFor(mount);
-    const target = expandGuestHome(mount.guestTarget);
-    lines.push(`mkdir -p ${shellQuote(target)}`);
-    lines.push(
-      `if [ -d ${shellQuote(`${source}/.`)} ]; then cp -a ${shellQuote(`${source}/.`)} ${shellQuote(target)}; fi`,
-    );
+    lines.push(`mkdir -p ${shellQuote(expandGuestHome(mount.guestTarget))}`);
   }
 
   // Pass 3: create all session symlinks
@@ -69,6 +69,58 @@ function profileConfigFinalizerScript(
   lines.push(...shadowMountLines(profile));
 
   return `${lines.join('\n')}\n`;
+}
+
+/**
+ * Copy each configMount's source directory contents into its guest target.
+ *
+ * The work happens entirely on the host: `cp -RL` resolves every symlink
+ * (including ones that escape the source subtree into sibling dirs like
+ * `.shared/`) into a throwaway temp dir, then `limactl copy` pushes the
+ * resulting plain files straight into the guest home.  This replaces the old
+ * "stage on host → virtio-fs mount → cp -a in guest" chain: there is no Lima
+ * mount, no persistent staging dir, and nothing to clean up when the VM is
+ * deleted.
+ *
+ * We stage the resolved tree under a directory whose basename matches the
+ * guest target's basename and copy that single directory into the guest
+ * *parent* (`limactl copy -r <tmp>/<base> vm:<parent>/`).  Copying one
+ * directory — rather than its individual children — sidesteps a limactl
+ * rsync-backend quirk that appends a trailing slash to every source argument
+ * (which makes rsync `(l)stat` plain files as directories and fail).  rsync
+ * merges the directory into any existing guest target, matching the old
+ * `cp -a` behaviour.
+ *
+ * The guest target directories must already exist (created by
+ * `profileConfigFinalizerScript` pass 2) before this runs, so their parents
+ * exist too.
+ */
+function copyConfigMountsToGuest(
+  vmName: string,
+  profile: Pick<Profile, 'configMounts' | 'dir'>,
+): void {
+  const mounts = (profile.configMounts || []).filter((mount) =>
+    existsSync(join(profile.dir, mount.source)),
+  );
+  if (mounts.length === 0) return;
+
+  const tmpRoot = mkdtempSync(join(tmpdir(), 'psbx-mount-'));
+  try {
+    for (const mount of mounts) {
+      const src = join(profile.dir, mount.source);
+      const guestTarget = expandGuestHome(mount.guestTarget);
+      const guestParent = posix.dirname(guestTarget);
+      const targetName = posix.basename(guestTarget);
+      // Stage under a per-mount subdir so distinct mounts that share a target
+      // basename never collide, and name the staged dir after the guest
+      // target so it lands exactly at <guestParent>/<targetName>.
+      const staged = join(tmpRoot, mount.name, targetName);
+      copyDirWithResolvedSymlinks(realpathSync(src), staged);
+      limaCopyToVm(vmName, [staged], `${guestParent}/`);
+    }
+  } finally {
+    rmSync(tmpRoot, { recursive: true, force: true });
+  }
 }
 
 const CLONE_IDENTITY_FINALIZER = `set -eu
@@ -219,6 +271,7 @@ function remountShadowPaths(vmName: string, profile: Pick<Profile, 'shadowPaths'
 function finalizeVm(vmName: string, profile: Profile): void {
   limaShellScript(vmName, CLONE_IDENTITY_FINALIZER, { asRoot: true });
   limaShellScript(vmName, profileConfigFinalizerScript(profile));
+  copyConfigMountsToGuest(vmName, profile);
 }
 
 function cacheSysprepScript(): string {
@@ -232,6 +285,7 @@ function sysprepCacheVm(vmName: string): void {
 export {
   CACHE_SYSPREP_VERSION,
   cacheSysprepScript,
+  copyConfigMountsToGuest,
   finalizeVm,
   profileConfigFinalizerScript,
   remountShadowPaths,

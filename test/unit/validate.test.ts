@@ -126,7 +126,7 @@ describe('validateConfig', { concurrency: false }, () => {
           '',
         ].join('\n'),
       );
-      writeFileSync(provisionPath, '#!/bin/sh\ncp /mnt/host-config/agent/settings.json /tmp\n');
+      writeFileSync(provisionPath, '#!/bin/sh\ncp /home/agent/workdir/settings.json /tmp\n');
       const validation: ValidationResult = validateConfig(
         {
           name: 'cache-unsafe',

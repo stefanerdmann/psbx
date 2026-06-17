@@ -3,21 +3,21 @@
  *
  * Builds the effective `lima.yaml` for a project VM by merging the profile
  * Lima YAML with a small project-level override (`<project>/.psbx/
- * lima.yaml`, limited to `cpus`/`memory`/`disk`) and layering dynamic
- * mounts (the project workdir + each profile configMount). A "cache" YAML
- * variant excludes the dynamic mounts so that two projects sharing a
- * profile share one content-addressed cache VM.
+ * lima.yaml`, limited to `cpus`/`memory`/`disk`) and layering the single
+ * dynamic mount (the project workdir). Profile configMounts are not mounted;
+ * their contents are pushed into the guest home at finalize time (see
+ * finalize.ts). The "cache" YAML variant also excludes the workdir mount so
+ * that two projects sharing a profile share one content-addressed cache VM.
  *
  * Also exposes the canonical guest-side paths (`GUEST_HOME`,
- * `GUEST_WORKDIR`, `HOST_CONFIG_BASE`) so other modules don't hardcode
- * them.
+ * `GUEST_WORKDIR`) so other modules don't hardcode them.
  */
 
-import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
 import YAML from 'yaml';
 import { deepMerge, expandHome } from './config.ts';
-import type { ConfigMount, LimaConfig, LimaMount, Profile } from './types.ts';
+import type { LimaConfig, LimaMount, Profile } from './types.ts';
 import { expandTilde } from './utils.ts';
 
 type ProjectOverride = Partial<Pick<LimaConfig, 'cpus' | 'memory' | 'disk'>>;
@@ -25,13 +25,8 @@ type ProjectOverride = Partial<Pick<LimaConfig, 'cpus' | 'memory' | 'disk'>>;
 const GUEST_HOME = '/home/agent';
 const GUEST_WORKDIR = `${GUEST_HOME}/workdir`;
 const GUEST_PROJECT_AGENT_DIR = `${GUEST_WORKDIR}/.agents`;
-const HOST_CONFIG_BASE = '/mnt/host-config';
 const PROJECT_LIMA_PATH = join('.psbx', 'lima.yaml');
 const PROJECT_OVERRIDE_KEYS = new Set(['cpus', 'memory', 'disk']);
-
-function mountPointFor(mount: ConfigMount): string {
-  return `${HOST_CONFIG_BASE}/${mount.name}`;
-}
 
 function expandGuestHome(p: string): string;
 function expandGuestHome<T>(p: T): T;
@@ -122,27 +117,23 @@ function addOrReplaceMount(config: LimaConfig, mount: LimaMount): void {
   ];
 }
 
-function addDynamicMounts(config: LimaConfig, profile: Profile, projectDir: string): void {
+function addDynamicMounts(config: LimaConfig, projectDir: string): void {
   addOrReplaceMount(config, {
     location: projectDir,
     mountPoint: GUEST_WORKDIR,
     writable: true,
   });
-
-  for (const mount of profile.configMounts) {
-    const hostPath = join(profile.dir, mount.source);
-    if (!existsSync(hostPath)) continue;
-    addOrReplaceMount(config, {
-      location: realpathSync(hostPath),
-      mountPoint: mountPointFor(mount),
-      writable: false,
-    });
-  }
+  // Note: profile configMounts are NOT mounted into the guest. Their contents
+  // are pushed directly into the guest home at finalize time via `limactl
+  // copy` (see copyConfigMountsToGuest in finalize.ts), which resolves any
+  // escaping symlinks on the host. This keeps the rendered lima.yaml (and thus
+  // limaConfigHash / the profile cache key) independent of per-VM staging
+  // paths.
 }
 
 function buildLimaConfig(profile: Profile, projectDir: string): LimaConfig {
   const config = buildCacheLimaConfig(profile, projectDir);
-  addDynamicMounts(config, profile, projectDir);
+  addDynamicMounts(config, projectDir);
 
   return config;
 }
@@ -171,13 +162,9 @@ function buildCacheLimaYaml(profile: Profile, projectDir?: string): string {
   return stringifyLimaConfig(buildCacheLimaConfig(profile, projectDir));
 }
 
-function buildProjectInstanceLimaYaml(
-  instanceYamlContent: string,
-  profile: Profile,
-  projectDir: string,
-): string {
+function buildProjectInstanceLimaYaml(instanceYamlContent: string, projectDir: string): string {
   const config = parseYamlObject<LimaConfig>(instanceYamlContent, 'instance lima.yaml');
-  addDynamicMounts(config, profile, projectDir);
+  addDynamicMounts(config, projectDir);
 
   return stringifyLimaConfig(config);
 }
@@ -207,9 +194,7 @@ export {
   GUEST_HOME,
   GUEST_PROJECT_AGENT_DIR,
   GUEST_WORKDIR,
-  HOST_CONFIG_BASE,
   loadProjectOverride,
-  mountPointFor,
   PROJECT_LIMA_PATH,
   PROJECT_OVERRIDE_KEYS,
   provisionFilePaths,

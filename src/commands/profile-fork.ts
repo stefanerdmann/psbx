@@ -14,7 +14,13 @@ import { getProfilesDir, getVmName, loadConfig, resolveProfile } from '../config
 import { limaCopyFromVm, limaStatus } from '../lima.ts';
 import { getRegistryEntry, registerVm } from '../registry.ts';
 import { expandGuestHome } from '../template.ts';
-import { type ConfigMount, FinalizerStatus, LimaStatus, type Profile } from '../types.ts';
+import {
+  type ConfigMount,
+  FinalizerStatus,
+  LimaStatus,
+  type Profile,
+  type SessionMount,
+} from '../types.ts';
 import { errorMessage } from '../utils.ts';
 import {
   assertProjectDirMatches,
@@ -25,10 +31,36 @@ import {
 
 type CopyFromVm = typeof limaCopyFromVm;
 
+/**
+ * Relative paths (within a configMount's exfiltrated target) of the session
+ * symlinks the finalizer plants in the guest from `sessions[].guestSymlink`.
+ *
+ * These links are created *inside the VM* and point at guest-only workspace
+ * paths (`<guest-workdir>/.agents/...`); they were never part of the host
+ * profile.  Exfiltrating them would write a dangling symlink into the new
+ * profile, which later breaks `hashFinalizerConfig` (it follows symlinks and
+ * would ENOENT on the dangling target).  Drop them so the forked profile
+ * mirrors the original host profile.
+ */
+function guestSymlinkExcludesFor(mount: ConfigMount, sessions: SessionMount[]): string[] {
+  const targetRoot = `${expandGuestHome(mount.guestTarget).replace(/\/+$/, '')}/`;
+  const excludes: string[] = [];
+  for (const session of sessions || []) {
+    if (!session.guestSymlink) continue;
+    const linkPath = expandGuestHome(session.guestSymlink).replace(/\/+$/, '');
+    if (linkPath === targetRoot.replace(/\/$/, '')) continue; // link *is* the target
+    if (linkPath.startsWith(targetRoot)) {
+      excludes.push(linkPath.slice(targetRoot.length));
+    }
+  }
+  return excludes;
+}
+
 function exfiltrateConfigMounts(
   vmName: string,
   targetProfileDir: string,
   configMounts: ConfigMount[],
+  sessions: SessionMount[] = [],
   copyFn: CopyFromVm = limaCopyFromVm,
 ): void {
   if (!Array.isArray(configMounts) || configMounts.length === 0) {
@@ -65,7 +97,10 @@ function exfiltrateConfigMounts(
         rmSync(stagingParent, { recursive: true, force: true });
       }
 
-      for (const ex of mount.exfiltrateExcludes || []) {
+      for (const ex of [
+        ...(mount.exfiltrateExcludes || []),
+        ...guestSymlinkExcludesFor(mount, sessions),
+      ]) {
         rmSync(join(targetPath, ex), { recursive: true, force: true });
       }
     } catch (err: unknown) {
@@ -142,7 +177,12 @@ export async function profileFork(
       console.log(
         `Exfiltrating guest config from sandbox '${vmName}' into profile "${newProfileName}"...`,
       );
-      exfiltrateConfigMounts(vmName, stagingDir, sourceProfile.configMounts);
+      exfiltrateConfigMounts(
+        vmName,
+        stagingDir,
+        sourceProfile.configMounts,
+        sourceProfile.sessions,
+      );
 
       renameSync(stagingDir, targetDir);
     } catch (err: unknown) {

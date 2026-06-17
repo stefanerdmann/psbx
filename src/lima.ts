@@ -310,6 +310,20 @@ function limaCopyFromVm(name: string, guestPath: string, hostPath: string): void
   runLimactl(['copy', '-r', `${name}:${guestPath}`, hostPath]);
 }
 
+/**
+ * Copy one or more host paths into a guest directory using `limactl copy`.
+ * Runs on the host, so symlinks in the sources are resolved against the host
+ * filesystem (the guest never needs to see them). The transfer is one-shot,
+ * unlike a Lima mount, so no host-side staging state has to outlive it.
+ *
+ * `guestDir` must already exist in the guest (create it via a finalizer
+ * mkdir first). Each source is copied into it preserving its basename.
+ */
+function limaCopyToVm(name: string, hostPaths: string[], guestDir: string): void {
+  if (hostPaths.length === 0) return;
+  runLimactl(['copy', '-r', ...hostPaths, `${name}:${guestDir}`]);
+}
+
 function limaShellScript(
   name: string,
   script: string,
@@ -340,6 +354,7 @@ export {
   limaCheckProvisioning,
   limaClone,
   limaCopyFromVm,
+  limaCopyToVm,
   limaDelete,
   limaGenerateJsonSchema,
   limaInstanceDir,

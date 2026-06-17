@@ -6,8 +6,8 @@ Provisioning is split into two phases:
 
 1. **Cache provisioning** runs once in a hidden profile cache VM. It should only
    do cache-safe work such as package installs, tool installs, shell setup, and
-   OS configuration. It must not depend on `~/workdir`, copy
-   `/mnt/host-config/*`, read passthrough environment variables, or write
+   OS configuration. It must not depend on `~/workdir`, on profile config mount
+   contents, read passthrough environment variables, or write
    project-specific state.
 2. **Project finalization** runs after a project VM has been cloned from the
    cache and started. psbx waits for `~/workdir`, creates declared
@@ -44,8 +44,9 @@ The `pi-in-ubuntu` user script:
 3. Installs `@earendil-works/pi-coding-agent` globally.
 4. Updates `.bashrc` so global npm tools are on `PATH`, CA certificates are used, and new shells start in `~/workdir`.
 
-The host profile is mounted read-only and is not mutated. Finalization copies
-`/mnt/host-config/agent` into `~/.pi/agent`, restricts `auth.json` permissions,
+The host profile is never mounted into the VM. Finalization copies the profile
+config mount source into `~/.pi/agent` (host-side, with symlinks resolved,
+pushed in via `limactl copy`), restricts `auth.json` permissions,
 and symlinks `~/.pi/agents/sessions` to `~/workdir/.agents/pi-sessions` so pi
 session history persists in the project directory. The copied
 `~/.pi/agent` directory is part of the VM. Changes there are lost when the VM is
@@ -68,7 +69,7 @@ User-side cache provisioning:
 2. Installs `@github/copilot` globally.
 3. Updates `.bashrc` so global npm tools are on `PATH`, CA certificates are used, and new shells start in `~/workdir`.
 
-Project finalization copies `/mnt/host-config/copilot` → `~/.copilot` and
+Project finalization copies the `copilot` config mount source → `~/.copilot` and
 replaces `~/.copilot/session-state` with a symlink to
 `~/workdir/.agents/copilot-sessions/session-state` so Copilot session history persists in the
 project directory.

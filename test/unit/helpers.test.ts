@@ -313,6 +313,37 @@ describe('hashFinalizerConfig driftDetectionExcludes', { concurrency: true }, ()
     }
   });
 
+  it('does not throw on a dangling symlink inside a configMount (exfiltrated sessions link)', () => {
+    // Defense-in-depth for `psbx profile fork`: if a guest session symlink
+    // (pointing at a guest-only workspace path) ever lands in a profile,
+    // hashFinalizerConfig must hash it without ENOENT-throwing.
+    const profileDir = mkdtempSync(join(tmpdir(), 'psbx-dangling-'));
+    try {
+      mkdirSync(join(profileDir, 'pi', 'agent'), { recursive: true });
+      writeFileSync(join(profileDir, 'pi', 'agent', 'settings.json'), '{"a":1}\n');
+      symlinkSync(
+        '/home/agent/workdir/.agents/pi-sessions',
+        join(profileDir, 'pi', 'agent', 'sessions'),
+      );
+
+      const profile = {
+        name: 'default',
+        dir: profileDir,
+        configMounts: [{ source: 'pi/agent', name: 'agent', guestTarget: '~/.pi/agent' }],
+      };
+
+      const hash1 = hashFinalizerConfig(profile);
+      assert.ok(hash1);
+
+      // Re-pointing the dangling link changes the hash (link text is hashed).
+      rmSync(join(profileDir, 'pi', 'agent', 'sessions'));
+      symlinkSync('/elsewhere', join(profileDir, 'pi', 'agent', 'sessions'));
+      assert.notStrictEqual(hash1, hashFinalizerConfig(profile));
+    } finally {
+      rmSync(profileDir, { recursive: true, force: true });
+    }
+  });
+
   it('produces a different hash than having no excludes', () => {
     const profileDir = mkdtempSync(join(tmpdir(), 'psbx-exclude-diff-'));
     try {

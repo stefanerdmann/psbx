@@ -47,7 +47,7 @@ describe('profileConfigFinalizerScript', { concurrency: true }, () => {
       ],
       sessions: [{ workspacePath: '.agents/sessions', guestSymlink: '~/.pi/agents/sessions' }],
     });
-    assert.ok(script.includes('/mnt/host-config/agent'));
+    assert.ok(script.includes('/home/agent/.pi/agent'));
     assert.ok(script.includes('/home/agent/workdir/.agents/sessions'));
     assert.ok(!script.includes('/tmp/psbx-cache-profile'));
     assert.ok(!script.includes('/Users/alice/project'));
@@ -106,6 +106,35 @@ describe('profileConfigFinalizerScript', { concurrency: true }, () => {
     assert.ok(
       script.match(/mkdir -p '[^']*\.agents\/pi-sessions\//),
       `expected dir path in mkdir; script:\n${script}`,
+    );
+  });
+
+  it('mkdirs each configMount guestTarget but does not copy contents inline', () => {
+    const script = profileConfigFinalizerScript({
+      configMounts: [
+        {
+          source: 'pi',
+          name: 'pi',
+          guestTarget: '~/.pi',
+        },
+      ],
+      sessions: [],
+    });
+    // Contents are delivered out-of-band by copyConfigMountsToGuest via
+    // `limactl copy` (host-side, symlinks resolved with cp -RL). The guest
+    // script only ensures the target directory exists; it must not embed a
+    // host-config mount path or a guest-side copy of the mount contents.
+    assert.ok(
+      script.includes("mkdir -p '/home/agent/.pi'"),
+      `expected mkdir of guestTarget; script:\n${script}`,
+    );
+    assert.ok(
+      !script.includes('/mnt/host-config'),
+      `must NOT reference a host-config mount; script:\n${script}`,
+    );
+    assert.ok(
+      !script.includes('cp -a') && !script.includes('cp -RL'),
+      `must NOT copy configMount contents inline in the guest script; script:\n${script}`,
     );
   });
 

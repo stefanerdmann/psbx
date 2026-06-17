@@ -20,7 +20,6 @@ import {
   buildLimaConfig,
   GUEST_WORKDIR,
   loadProjectOverride,
-  mountPointFor,
   PROJECT_LIMA_PATH,
   provisionFilePaths,
 } from './template.ts';
@@ -127,10 +126,9 @@ function validateCacheSafeProvisioning(profile: Profile, projectDir: string): st
     return errors;
   }
 
-  const cacheUnsafePaths = [
-    GUEST_WORKDIR,
-    ...(profile.configMounts || []).map((mount) => mountPointFor(mount)),
-  ];
+  // configMounts are no longer mounted into the guest (their contents are
+  // copied in at finalize time), so only the workdir mount is cache-unsafe.
+  const cacheUnsafePaths = [GUEST_WORKDIR];
 
   for (const file of provisionFilePaths(config)) {
     let content: string;

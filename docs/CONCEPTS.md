@@ -91,7 +91,7 @@ contains three keys:
 |---|---|---|
 | `defaultCmd` | string | Command to run when entering the VM (e.g. `pi`, `copilot`) |
 | `shellEnvAllowlist` | string[] | Host environment variables forwarded into the VM shell |
-| `configMounts` | object[] | Profile config directories mounted into the VM |
+| `configMounts` | object[] | Profile config directories copied into the VM at finalization |
 
 `psbx status` shows the env live through the VM's registered profile name.
 There is no per-VM env override stored in the registry. If the registered

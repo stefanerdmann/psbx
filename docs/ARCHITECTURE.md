@@ -37,8 +37,7 @@ psbx does not interpolate YAML text. For project VMs it:
 4. Deep-merges the project YAML over the profile YAML.
 5. Resolves relative `provision[].file` paths against the profile directory.
 6. Adds the project mount at `~/workdir`.
-7. Adds one read-only mount per `env.yaml#configMounts` entry that exists on disk: `<profileDir>/<source>` → `/mnt/host-config/<name>`.
-8. Serializes the object to a temporary `lima.yaml` in a private temp directory.
+7. Serializes the object to a temporary `lima.yaml` in a private temp directory.
 
 Extra arguments passed to `psbx up -- ...` are forwarded to `limactl start` after psbx has generated the YAML, so Lima handles their precedence.
 
@@ -55,8 +54,8 @@ Normal VM creation is clone-backed:
    Lima version, and CA certificate file contents.
 2. Ensure a stopped hidden cache VM named `psbx-cache-<cacheKey[0..12]>` exists.
 3. `limactl clone` the cache VM to the project VM name.
-4. Merge `~/workdir` and `/mnt/host-config/<name>` mounts into the clone's
-   already-expanded instance `lima.yaml`.
+4. Merge the `~/workdir` mount into the clone's
+   already-expanded instance `lima.yaml`. (Profile config mounts are not mounted; they are copied in during finalization.)
 5. Start the clone and run finalization.
 
 Cache keys intentionally exclude `defaultCmd`, `shellEnvAllowlist`, current host
@@ -76,9 +75,9 @@ affect creation-time state that cannot be safely reconstructed after cloning.
 | Host | Guest | Access | Why |
 |---|---|---|---|
 | Current project directory | `~/workdir` | Read-write | Code changes, project files, and `~/workdir/.agents` must persist. |
-| Each profile config subfolder (`env.yaml#configMounts[].source`) | `/mnt/host-config/<name>` | Read-only | Host profile is the source of truth and should not be mutated by the VM. |
+| Each profile config subfolder (`env.yaml#configMounts[].source`) | _(not mounted)_ | Copied in at finalization | Host profile is the source of truth and should not be mutated by the VM; its contents are pushed in one-way via `limactl copy`. |
 
-Project finalization copies each `/mnt/host-config/<name>` into the matching guest target (e.g., `~/.pi/agent`, `~/.copilot`). The copy lets agents mutate auth and settings inside the VM without writing back to the host profile.
+Project finalization copies each config mount source into the matching guest target (e.g., `~/.pi/agent`, `~/.copilot`), host-side via `limactl copy` with symlinks resolved on the host. The copy lets agents mutate auth and settings inside the VM without writing back to the host profile.
 
 ## Environment passthrough
 

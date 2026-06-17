@@ -73,7 +73,6 @@ interface StopIfRunningOptions {
 }
 
 interface HashProfilePathOptions {
-  followSymlink?: boolean;
   excludes?: Set<string>;
 }
 
@@ -414,7 +413,7 @@ function hashProfilePath(
   path: string,
   relativePath: string,
   seen: Set<string>,
-  { followSymlink = true, excludes }: HashProfilePathOptions = {},
+  { excludes }: HashProfilePathOptions = {},
 ): void {
   if (excludes?.has(relativePath)) {
     hash.update(`${relativePath}\0excluded`);
@@ -430,8 +429,12 @@ function hashProfilePath(
     return;
   }
 
-  if (lst.isSymbolicLink() && !followSymlink) {
-    hash.update(`${relativePath}\0symlink\0${statMode(lst)}\0${readlinkSync(path)}`);
+  // Defense-in-depth: a symlink whose target does not exist (e.g. a guest
+  // session link that slipped into an exfiltrated profile) would make the
+  // `realpathSync`/`statSync` calls below throw ENOENT. Hash the link text
+  // instead of following it so the walk never aborts.
+  if (lst.isSymbolicLink() && !existsSync(path)) {
+    hash.update(`${relativePath}\0dangling-symlink\0${readlinkSync(path)}`);
     return;
   }
 
@@ -447,7 +450,6 @@ function hashProfilePath(
     hash.update(`${relativePath}\0dir\0${statMode(stat)}`);
     for (const name of readdirSync(path).sort()) {
       hashProfilePath(hash, join(path, name), `${relativePath}/${name}`, seen, {
-        followSymlink: false,
         excludes,
       });
     }

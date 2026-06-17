@@ -1,10 +1,19 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { after, before, describe, it } from 'node:test';
 import { exfiltrateConfigMounts } from '../../src/commands/profile-fork.ts';
-import type { ConfigMount } from '../../src/types.ts';
+import type { ConfigMount, SessionMount } from '../../src/types.ts';
 
 // ---------------------------------------------------------------------------
 // exfiltrateConfigMounts (migrated from static.test.js)
@@ -42,7 +51,7 @@ describe('exfiltrateConfigMounts', { concurrency: false }, () => {
       writeFileSync(join(subdir, 'marker.txt'), 'from-vm');
     }
 
-    exfiltrateConfigMounts('test-vm', profileDir, mounts, scpCopy);
+    exfiltrateConfigMounts('test-vm', profileDir, mounts, [], scpCopy);
 
     const markerPath = join(profileDir, 'copilot', 'marker.txt');
     assert.ok(existsSync(markerPath), `marker.txt not found at ${markerPath}`);
@@ -69,7 +78,7 @@ describe('exfiltrateConfigMounts', { concurrency: false }, () => {
       writeFileSync(join(hostDir, 'subdir', 'nested.txt'), 'nested-content');
     }
 
-    exfiltrateConfigMounts('test-vm', profileDir, mounts, rsyncCopy);
+    exfiltrateConfigMounts('test-vm', profileDir, mounts, [], rsyncCopy);
 
     const markerPath = join(profileDir, 'copilot', 'marker.txt');
     assert.ok(existsSync(markerPath), `marker.txt not found at ${markerPath}`);
@@ -99,7 +108,7 @@ describe('exfiltrateConfigMounts', { concurrency: false }, () => {
       writeFileSync(join(hostDir, 'logs', 'log.txt'), 'log');
     }
 
-    exfiltrateConfigMounts('test-vm', profileDir, mounts, rsyncCopy);
+    exfiltrateConfigMounts('test-vm', profileDir, mounts, [], rsyncCopy);
 
     assert.ok(existsSync(join(profileDir, 'copilot', 'settings.json')));
     assert.ok(!existsSync(join(profileDir, 'copilot', 'session-state')));
@@ -136,7 +145,7 @@ describe('exfiltrateConfigMounts', { concurrency: false }, () => {
         },
       ];
 
-      exfiltrateConfigMounts('test-vm', profileDir, mounts, copyFn);
+      exfiltrateConfigMounts('test-vm', profileDir, mounts, [], copyFn);
 
       const authPath = join(profileDir, 'pi', 'agent', 'auth.json');
       assert.ok(existsSync(authPath), `[${label}] auth.json not found at ${authPath}`);
@@ -168,7 +177,7 @@ describe('exfiltrateConfigMounts', { concurrency: false }, () => {
         throw new Error('connection refused');
       }
 
-      exfiltrateConfigMounts('test-vm', profileDir, mounts, failingCopy);
+      exfiltrateConfigMounts('test-vm', profileDir, mounts, [], failingCopy);
 
       assert.ok(warnings.length > 0, 'expected a warning');
       assert.ok(warnings[0].includes('connection refused'));
@@ -176,5 +185,39 @@ describe('exfiltrateConfigMounts', { concurrency: false }, () => {
     } finally {
       console.warn = origWarn;
     }
+  });
+
+  it('drops guest sessions[].guestSymlink links so they never land in the profile', () => {
+    // Regression for the `psbx profile fork` ENOENT: the finalizer plants
+    // `~/.pi/agent/sessions -> <guest-workdir>/.agents/pi-sessions` inside the
+    // configMount target. That guest-only link must not be exfiltrated, else
+    // the forked profile carries a dangling symlink that later breaks the
+    // rebase hash walk (hashFinalizerConfig follows symlinks).
+    const profileDir = join(tmpDir, 'session-symlink-profile');
+    mkdirSync(join(profileDir, 'pi', 'agent'), { recursive: true });
+
+    const mounts: ConfigMount[] = [
+      { source: 'pi/agent', name: 'agent', guestTarget: '~/.pi/agent' },
+    ];
+    const sessions: SessionMount[] = [
+      { workspacePath: '.agents/pi-sessions/', guestSymlink: '~/.pi/agent/sessions' },
+    ];
+
+    function rsyncCopy(_vm: string, _guestPath: string, hostDir: string) {
+      writeFileSync(join(hostDir, 'settings.json'), '{}');
+      // The guest link arrives as a dangling symlink to a guest-only path.
+      symlinkSync('/home/agent/workdir/.agents/pi-sessions', join(hostDir, 'sessions'));
+    }
+
+    exfiltrateConfigMounts('test-vm', profileDir, mounts, sessions, rsyncCopy);
+
+    assert.ok(existsSync(join(profileDir, 'pi', 'agent', 'settings.json')));
+    let linkPresent = true;
+    try {
+      lstatSync(join(profileDir, 'pi', 'agent', 'sessions'));
+    } catch {
+      linkPresent = false;
+    }
+    assert.ok(!linkPresent, 'guest session symlink should be excluded from the profile');
   });
 });

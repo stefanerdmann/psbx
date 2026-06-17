@@ -10,7 +10,7 @@ psbx assumes **the host is trusted and the VM guest is untrusted**. The design p
 
 | Boundary | Enforcement |
 |---|---|
-| Host profile config dirs → VM | Each subfolder declared in `env.yaml#configMounts` is mounted **read-only** at `/mnt/host-config/<name>`. psbx copies the contents into the corresponding guest target (e.g., `~/.pi/agent`, `~/.copilot`) during finalization but the VM cannot write back. |
+| Host profile config dirs → VM | Each subfolder declared in `env.yaml#configMounts` is copied **one-way** into the corresponding guest target (e.g., `~/.pi/agent`, `~/.copilot`) during finalization, host-side via `limactl copy` (symlinks resolved on the host). The host profile is never mounted, so the VM has no live view of it and cannot write back. |
 | Host project directory → VM | Mounted **read-write** at `~/workdir`. The agent needs write access to modify project files. |
 | Host environment → VM | **Explicit opt-in only.** Only variables listed in `env.yaml#shellEnvAllowlist` are forwarded; all others are blocked via `LIMA_SHELLENV_BLOCK=*`. |
 | Project Lima overrides | Restricted to `cpus`, `memory`, and `disk`. A project cannot override mounts, provisioning, networking, or other security-relevant Lima settings. |
@@ -22,8 +22,7 @@ psbx assumes **the host is trusted and the VM guest is untrusted**. The design p
 ```text
 Host                                    VM Guest
 ─────────────────────────────────────── ───────────────────────────────
-~/.psbx/profiles/<p>/<configMount.source> ──► /mnt/host-config/<name> (RO)
-                                                  └─ copied to <guestTarget> (VM-local)
+~/.psbx/profiles/<p>/<configMount.source> ──► <guestTarget> (VM-local, one-way copy)
 <project>/ ◄────────────────────────►   ~/workdir (RW)
                                         └─ ~/workdir/.agents/<tool>-sessions (persistent, via sessions.guestSymlink)
 shellEnvAllowlist variables ───────────► LIMA_SHELLENV_ALLOW (filtered)

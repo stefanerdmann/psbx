@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
@@ -11,9 +11,7 @@ import {
   buildProjectInstanceLimaYaml,
   expandGuestHome,
   GUEST_HOME,
-  HOST_CONFIG_BASE,
   loadProjectOverride,
-  mountPointFor,
 } from '../../src/template.ts';
 
 // ---------------------------------------------------------------------------
@@ -37,20 +35,6 @@ describe('expandGuestHome', { concurrency: true }, () => {
     assert.strictEqual(expandGuestHome(undefined), undefined);
     assert.strictEqual(expandGuestHome(null), null);
     assert.strictEqual(expandGuestHome(42), 42);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// mountPointFor
-// ---------------------------------------------------------------------------
-
-describe('mountPointFor', { concurrency: true }, () => {
-  it('returns /mnt/host-config/<name>', () => {
-    assert.strictEqual(mountPointFor({ name: 'agent' }), `${HOST_CONFIG_BASE}/agent`);
-  });
-
-  it('works with dotted names', () => {
-    assert.strictEqual(mountPointFor({ name: 'my.config' }), `${HOST_CONFIG_BASE}/my.config`);
   });
 });
 
@@ -139,7 +123,6 @@ type RunOptions = {
 };
 
 type RenderProfile = Pick<Profile, 'name' | 'dir' | 'limaPath' | 'configMounts' | 'sessions'>;
-type InstanceProfile = Pick<Profile, 'name' | 'dir' | 'configMounts' | 'sessions'>;
 type MountedLimaConfig = LimaConfig & { mounts: LimaMount[] };
 type ParsedInstanceConfig = MountedLimaConfig & {
   base?: string;
@@ -162,7 +145,7 @@ function run(
 }
 
 describe('buildLimaConfig', { concurrency: false }, () => {
-  it('mounts each profile config subfolder under /mnt/host-config/<name>', () => {
+  it('mounts only the project workdir, never profile configMounts', () => {
     const home = mkdtempSync(join(tmpdir(), 'psbx-mounts-home-'));
     const proj = mkdtempSync(join(tmpdir(), 'psbx-mounts-proj-'));
     const origHome = process.env.HOME;
@@ -177,14 +160,14 @@ describe('buildLimaConfig', { concurrency: false }, () => {
       const profile = resolveProfile({ defaultProfile: 'co' }, 'co');
       const config = buildLimaConfig(profile, proj) as MountedLimaConfig;
       const mountPoints = config.mounts.map((m) => m.mountPoint).sort();
-      assert.ok(mountPoints.includes('/mnt/host-config/copilot'), `mounts: ${mountPoints}`);
       assert.ok(
         mountPoints.includes('/home/agent/workdir'),
         `expected workdir mount, got: ${mountPoints}`,
       );
+      // configMounts are copied in at finalize time, never mounted.
       assert.ok(
-        !mountPoints.some((p) => p.startsWith('/mnt/psbx-host-config')),
-        `legacy mount still present: ${mountPoints}`,
+        !mountPoints.some((p) => p.startsWith('/mnt/host-config')),
+        `configMounts must not be mounted: ${mountPoints}`,
       );
     } finally {
       process.env.HOME = origHome;
@@ -229,13 +212,12 @@ describe('buildLimaConfig', { concurrency: false }, () => {
       const fullConfig = buildLimaConfig(profile, projectDir) as MountedLimaConfig;
       assert.ok(
         !Array.isArray(cacheConfig.mounts) ||
-          !cacheConfig.mounts.some((m) =>
-            ['/home/agent/workdir', '/mnt/host-config/agent'].includes(m.mountPoint),
-          ),
-        `cache mounts should not contain dynamic project/profile mounts: ${JSON.stringify(cacheConfig.mounts)}`,
+          !cacheConfig.mounts.some((m) => m.mountPoint === '/home/agent/workdir'),
+        `cache mounts should not contain the dynamic workdir mount: ${JSON.stringify(cacheConfig.mounts)}`,
       );
       assert.ok(fullConfig.mounts.some((m) => m.mountPoint === '/home/agent/workdir'));
-      assert.ok(fullConfig.mounts.some((m) => m.mountPoint === '/mnt/host-config/agent'));
+      // configMounts are never mounted (copied at finalize time instead).
+      assert.ok(!fullConfig.mounts.some((m) => m.mountPoint.startsWith('/mnt/host-config')));
     } finally {
       rmSync(profileDir, { recursive: true, force: true });
       rmSync(projectDir, { recursive: true, force: true });
@@ -246,8 +228,6 @@ describe('buildLimaConfig', { concurrency: false }, () => {
     const profileDir = mkdtempSync(join(tmpdir(), 'psbx-instance-profile-'));
     const projectDir = mkdtempSync(join(tmpdir(), 'psbx-instance-project-'));
     try {
-      const configDir = join(profileDir, 'copilot');
-      mkdirSync(configDir, { recursive: true });
       const instanceYaml = [
         'user:',
         '  name: agent',
@@ -265,21 +245,8 @@ describe('buildLimaConfig', { concurrency: false }, () => {
         '    writable: false',
         '',
       ].join('\n');
-      const profile: InstanceProfile = {
-        name: 'instance-test',
-        dir: profileDir,
-        configMounts: [
-          {
-            source: 'copilot',
-            name: 'copilot',
-            guestTarget: '~/.copilot',
-          },
-        ],
-        sessions: [],
-      };
-
       const config = YAML.parse(
-        buildProjectInstanceLimaYaml(instanceYaml, profile, projectDir),
+        buildProjectInstanceLimaYaml(instanceYaml, projectDir),
       ) as ParsedInstanceConfig;
       assert.strictEqual(config.base, undefined);
       assert.deepStrictEqual(config.images, [
@@ -291,7 +258,8 @@ describe('buildLimaConfig', { concurrency: false }, () => {
       const mounts = new Map(config.mounts.map((mount) => [mount.mountPoint, mount]));
       assert.strictEqual(mounts.get('/cache-only').location, '/cache-only');
       assert.strictEqual(mounts.get('/home/agent/workdir').location, projectDir);
-      assert.strictEqual(mounts.get('/mnt/host-config/copilot').location, realpathSync(configDir));
+      // configMounts are never mounted.
+      assert.ok(![...mounts.keys()].some((p) => p.startsWith('/mnt/host-config')));
     } finally {
       rmSync(profileDir, { recursive: true, force: true });
       rmSync(projectDir, { recursive: true, force: true });

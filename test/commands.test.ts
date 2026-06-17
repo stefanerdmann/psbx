@@ -194,6 +194,31 @@ describe('commands', { concurrency: false }, () => {
     }
   });
 
+  it('[cmd] profile init --symlink-from-host warns about symlinks escaping the source', () => {
+    const home = mkdtempSync(join(tmpdir(), 'psbx-sfh-'));
+    const secretDir = mkdtempSync(join(tmpdir(), 'psbx-secret-'));
+    try {
+      writeFileSync(join(secretDir, 'token'), 'super-secret');
+      const hostConfig = join(home, '.pi', 'agent');
+      mkdirSync(hostConfig, { recursive: true });
+      writeFileSync(join(hostConfig, 'config.json'), '{}');
+      symlinkSync(secretDir, join(hostConfig, 'leak'));
+
+      const r = run(['profile', 'init', 'sfh', '--self-test', '--symlink-from-host'], {
+        HOME: home,
+        cwd: projectDir,
+      });
+      assert.strictEqual(r.status, 0, `stderr: ${r.stderr}`);
+      assert.ok(
+        r.stderr.includes('symlink pointing outside the source directory'),
+        `stderr: ${r.stderr}`,
+      );
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+      rmSync(secretDir, { recursive: true, force: true });
+    }
+  });
+
   it('[cmd] profile edit --file rejects path traversal outside the profile', () => {
     const home = mkdtempSync(join(tmpdir(), 'psbx-editprof-'));
     try {
